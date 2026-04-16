@@ -1,121 +1,171 @@
-"use client"
+"use client";
 
-import { AppShell } from "@/components/layout/app-shell"
-import { StatsCard } from "@/components/dashboard/stats-card"
-import { ActivityFeed } from "@/components/dashboard/activity-feed"
-import { SkillChart } from "@/components/dashboard/skill-chart"
-import { BadgesPreview } from "@/components/dashboard/badges-preview"
-import { WeeklyChart } from "@/components/dashboard/weekly-chart"
-import { LearningPreview } from "@/components/dashboard/learning-preview"
-import { ProgressRing } from "@/components/dashboard/progress-ring"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { currentUser, userStats } from "@/lib/mock-data"
-import { useAuth } from "@/components/auth/auth-provider"
-import { Video, FileText, Target, Award, Flame, ArrowRight } from "lucide-react"
-import Link from "next/link"
+import { useEffect, useState } from "react";
+import Link from "next/link";
+import { AppShell } from "@/components/layout/app-shell";
+import { useAuth } from "@/components/auth/auth-provider";
+import { getProjectsRequest, type Project } from "@/lib/api-projects";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { FolderKanban, Trophy, Users, FileBarChart, Plus } from "lucide-react";
 
 export default function DashboardPage() {
-  const { user } = useAuth()
-  const displayName = user?.name?.split(" ")[0] ?? currentUser.name.split(" ")[0]
-  const xpProgress = (currentUser.xp / currentUser.xpToNextLevel) * 100
+  const { user } = useAuth();
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    const loadProjects = async () => {
+      try {
+        const data = await getProjectsRequest();
+        setProjects(data);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Failed to load dashboard");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadProjects();
+  }, []);
+
+  const displayName = user?.name?.split(" ")[0] ?? "User";
 
   return (
-    <AppShell 
+    <AppShell
       title={`Welcome back, ${displayName}`}
-      description="Track your progress and continue your interview preparation journey"
+      description="Manage your job application projects and overall progress"
     >
       <div className="space-y-6">
-        {/* Level Progress Card */}
-        <Card className="bg-gradient-to-r from-primary/10 via-primary/5 to-transparent border-primary/20">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between gap-6">
-              <div className="flex items-center gap-6">
-                <ProgressRing progress={xpProgress} size={100} strokeWidth={8}>
-                  <div className="text-center">
-                    <span className="text-2xl font-bold">{currentUser.level}</span>
-                    <p className="text-xs text-muted-foreground">Level</p>
+        {loading ? <p className="text-sm text-muted-foreground">Loading dashboard...</p> : null}
+        {error ? <p className="text-sm text-red-500">{error}</p> : null}
+
+        {!loading && !error && projects.length === 0 ? (
+          <Card className="border-primary/20 bg-gradient-to-r from-primary/10 via-primary/5 to-transparent">
+            <CardHeader>
+              <CardTitle>Create your first project</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <p className="text-sm text-muted-foreground">
+                A project means one job you are applying for. Add the job description and your resume,
+                and InterMate will personalize interview prep, resume analysis, and learning mode for that job.
+              </p>
+              <Link href="/projects/new">
+                <Button className="gap-2">
+                  <Plus className="h-4 w-4" />
+                  Create First Project
+                </Button>
+              </Link>
+            </CardContent>
+          </Card>
+        ) : null}
+
+        {!loading && !error && projects.length > 0 ? (
+          <>
+            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+              {projects.map((project) => (
+                <Card key={project.id}>
+                  <CardHeader>
+                    <CardTitle className="text-lg">{project.title}</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-2">
+                    <p className="text-sm text-muted-foreground">
+                      {project.companyName || "No company name"}
+                    </p>
+                    <p className="text-sm text-muted-foreground">
+                      {project.jobRole || "No role set"}
+                    </p>
+                    <p className="text-sm">
+                      Match Score: <span className="font-semibold">{project.aiInsights?.resumeMatchScore ?? 0}%</span>
+                    </p>
+                    <p className="text-sm">
+                      Outcome: <span className="font-semibold capitalize">{project.outcome?.status || "applied"}</span>
+                    </p>
+                    <div className="pt-2">
+                      <Link href={`/projects/${project.id}`}>
+                        <Button size="sm">Open Project</Button>
+                      </Link>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Global Progress</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid gap-4 md:grid-cols-3">
+                  <div className="rounded-xl border p-4">
+                    <div className="mb-2 flex items-center gap-2">
+                      <FolderKanban className="h-4 w-4" />
+                      <span className="font-medium">Projects</span>
+                    </div>
+                    <p className="text-2xl font-bold">{projects.length}</p>
                   </div>
-                </ProgressRing>
-                <div>
-                  <h3 className="text-lg font-semibold">Level {currentUser.level} Explorer</h3>
-                  <p className="text-sm text-muted-foreground">
-                    {currentUser.xp.toLocaleString()} / {currentUser.xpToNextLevel.toLocaleString()} XP to next level
-                  </p>
-                  <div className="mt-2 flex items-center gap-2">
-                    <Flame className="h-4 w-4 text-orange-500" />
-                    <span className="text-sm font-medium">{currentUser.streak} day streak</span>
+
+                  <div className="rounded-xl border p-4">
+                    <div className="mb-2 flex items-center gap-2">
+                      <Trophy className="h-4 w-4" />
+                      <span className="font-medium">Gamification</span>
+                    </div>
+                    <p className="text-sm text-muted-foreground">
+                      Global XP and badges will aggregate across all projects.
+                    </p>
+                  </div>
+
+                  <div className="rounded-xl border p-4">
+                    <div className="mb-2 flex items-center gap-2">
+                      <Users className="h-4 w-4" />
+                      <span className="font-medium">Peer Review</span>
+                    </div>
+                    <p className="text-sm text-muted-foreground">
+                      Reviews will work across all public mock interviews.
+                    </p>
                   </div>
                 </div>
-              </div>
-              <div className="hidden md:flex gap-3">
-                <Link href="/interview">
-                  <Button className="gap-2">
-                    <Video className="h-4 w-4" />
-                    Start Interview
+
+                <div className="mt-4">
+                  <Link href="/projects/new">
+                    <Button variant="outline" className="gap-2">
+                      <Plus className="h-4 w-4" />
+                      Add Another Project
+                    </Button>
+                  </Link>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Shared Areas</CardTitle>
+              </CardHeader>
+              <CardContent className="grid gap-4 md:grid-cols-3">
+                <Link href="/gamification">
+                  <Button variant="outline" className="w-full justify-start gap-2">
+                    <Trophy className="h-4 w-4" />
+                    Gamification
                   </Button>
                 </Link>
-                <Link href="/resume">
-                  <Button variant="outline" className="gap-2">
-                    <FileText className="h-4 w-4" />
-                    Analyze Resume
+                <Link href="/peer-review">
+                  <Button variant="outline" className="w-full justify-start gap-2">
+                    <Users className="h-4 w-4" />
+                    Peer Review
                   </Button>
                 </Link>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Stats Grid */}
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-          <StatsCard
-            title="Total Interviews"
-            value={userStats.totalInterviews}
-            icon={Video}
-            trend="up"
-            trendValue="+3 this week"
-          />
-          <StatsCard
-            title="Average Score"
-            value={`${userStats.averageScore}%`}
-            icon={Target}
-            trend="up"
-            trendValue="+5% from last month"
-          />
-          <StatsCard
-            title="Practice Hours"
-            value={userStats.practiceHours}
-            icon={Award}
-            trend="up"
-            trendValue="+8.5 this week"
-          />
-          <StatsCard
-            title="Badges Earned"
-            value={userStats.badgesEarned}
-            icon={Award}
-            trend="stable"
-            trendValue="2 in progress"
-          />
-        </div>
-
-        {/* Main Content Grid */}
-        <div className="grid gap-6 lg:grid-cols-3">
-          {/* Left Column - 2 cols */}
-          <div className="lg:col-span-2 space-y-6">
-            <LearningPreview />
-            <WeeklyChart />
-          </div>
-
-          {/* Right Column */}
-          <div className="space-y-6">
-            <SkillChart />
-            <BadgesPreview />
-          </div>
-        </div>
-
-        {/* Activity Feed */}
-        <ActivityFeed />
+                <Link href="/reports">
+                  <Button variant="outline" className="w-full justify-start gap-2">
+                    <FileBarChart className="h-4 w-4" />
+                    Reports
+                  </Button>
+                </Link>
+              </CardContent>
+            </Card>
+          </>
+        ) : null}
       </div>
     </AppShell>
-  )
-}
+  );
+}devicePixelRatio
