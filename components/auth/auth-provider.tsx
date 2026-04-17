@@ -2,7 +2,13 @@
 
 import React, { createContext, useContext, useEffect, useMemo, useState } from "react";
 import { signupRequest, loginRequest, getMeRequest, type AuthUser } from "@/lib/api-auth";
-import { saveSession, getToken, clearSession } from "@/lib/session";
+import { saveSession, getToken, getStoredUser, clearSession } from "@/lib/session";
+
+const DEMO_USER: AuthUser = {
+  id: "demo",
+  name: "Demo User",
+  email: "demo@intermate.app",
+};
 
 type SignupInput = {
   name: string;
@@ -16,6 +22,7 @@ type AuthContextType = {
   login: (email: string, password: string) => Promise<void>;
   signup: (data: SignupInput) => Promise<void>;
   logout: () => void;
+  demoLogin: () => void;
 };
 
 const AuthContext = createContext<AuthContextType | null>(null);
@@ -31,6 +38,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
         if (!token) {
           setUser(null);
+          setLoading(false);
+          return;
+        }
+
+        if (token === "demo-token") {
+          const stored = getStoredUser();
+          setUser(stored);
           setLoading(false);
           return;
         }
@@ -63,6 +77,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       logout: () => {
         clearSession();
         setUser(null);
+      },
+      demoLogin: () => {
+        saveSession("demo-token", DEMO_USER);
+        setUser(DEMO_USER);
       },
     }),
     [user, loading]

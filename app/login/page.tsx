@@ -8,12 +8,11 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import { getProjectsRequest } from "@/lib/api-projects";
 
 export default function LoginPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { login, user, loading: authLoading } = useAuth();
+  const { login, demoLogin, user, loading: authLoading } = useAuth();
 
   const registered = searchParams.get("registered") === "1";
 
@@ -35,14 +34,7 @@ export default function LoginPage() {
 
     try {
       await login(email.trim(), password);
-
-      const projects = await getProjectsRequest();
-
-      if (projects.length === 0) {
-        router.replace("/dashboard");
-      } else {
-        router.replace("/dashboard");
-      }
+      router.replace("/dashboard");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Login failed");
     } finally {
@@ -86,6 +78,24 @@ export default function LoginPage() {
 
             <Button type="submit" className="w-full" disabled={loading}>
               {loading ? "Logging in..." : "Login"}
+            </Button>
+
+            <div className="relative">
+              <div className="absolute inset-0 flex items-center">
+                <span className="w-full border-t" />
+              </div>
+              <div className="relative flex justify-center text-xs uppercase">
+                <span className="bg-background px-2 text-muted-foreground">or</span>
+              </div>
+            </div>
+
+            <Button
+              type="button"
+              variant="outline"
+              className="w-full"
+              onClick={() => { demoLogin(); router.replace("/dashboard"); }}
+            >
+              Continue as Demo
             </Button>
 
             <p className="text-center text-sm text-muted-foreground">

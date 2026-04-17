@@ -114,6 +114,7 @@ async function authFetch(url: string, options: RequestInit = {}) {
 // ─── Project CRUD ──────────────────────────────────────────────────────────────
 
 export async function getProjectsRequest(): Promise<Project[]> {
+  if (getToken() === "demo-token") return [];
   return authFetch(`${API_URL}/projects`);
 }
 
