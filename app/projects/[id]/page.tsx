@@ -51,11 +51,16 @@ export default function ProjectDetailsPage() {
   const [showResume, setShowResume] = useState(false);
 
   useEffect(() => {
-    getProjectRequest(projectId)
-      .then(setProject)
-      .catch((err) => setError(err instanceof Error ? err.message : "Failed to load project"))
-      .finally(() => setLoading(false));
-  }, [projectId]);
+  if (!projectId || projectId === "undefined") {
+    router.replace("/projects");
+    return;
+  }
+  getProjectRequest(projectId)
+    .then(setProject)
+    .catch((err) => setError(err instanceof Error ? err.message : "Failed to load project"))
+    .finally(() => setLoading(false));
+}, [projectId, router]);
+
 
   async function handleDelete() {
     if (!project) return;

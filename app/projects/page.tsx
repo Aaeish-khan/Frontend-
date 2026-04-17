@@ -2,28 +2,12 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { useParams, useRouter } from "next/navigation";
 import { AppShell } from "@/components/layout/app-shell";
-import { getProjectRequest, deleteProjectRequest, type Project } from "@/lib/api-projects";
+import { getProjectsRequest, type Project } from "@/lib/api-projects";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import {
-  ArrowLeft,
-  Building2,
-  Briefcase,
-  PencilLine,
-  Trash2,
-  FileText,
-  MessageSquare,
-  BookOpen,
-  Target,
-  CheckCircle2,
-  XCircle,
-  ChevronDown,
-  ChevronUp,
-  Sparkles,
-} from "lucide-react";
+import { Building2, Briefcase, Plus, Sparkles } from "lucide-react";
 
 function scoreColor(score: number) {
   if (score >= 80) return "text-green-500";
@@ -32,286 +16,96 @@ function scoreColor(score: number) {
   return "text-red-500";
 }
 
-function scoreLabel(score: number) {
-  if (score >= 80) return "Excellent Match";
-  if (score >= 60) return "Good Match";
-  if (score >= 40) return "Moderate Match";
-  return "Needs Work";
-}
-
-export default function ProjectDetailsPage() {
-  const params = useParams();
-  const router = useRouter();
-  const projectId = params.id as string;
-
-  const [project, setProject] = useState<Project | null>(null);
+export default function ProjectsPage() {
+  const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
-  const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState("");
-  const [showResume, setShowResume] = useState(false);
 
   useEffect(() => {
-    getProjectRequest(projectId)
-      .then(setProject)
-      .catch((err) => setError(err instanceof Error ? err.message : "Failed to load project"))
+    getProjectsRequest()
+      .then(setProjects)
+      .catch((err) => setError(err instanceof Error ? err.message : "Failed to load projects"))
       .finally(() => setLoading(false));
-  }, [projectId]);
-
-  async function handleDelete() {
-    if (!project) return;
-    const confirmed = window.confirm(`Archive "${project.title}"?`);
-    if (!confirmed) return;
-
-    try {
-      setDeleting(true);
-      await deleteProjectRequest(project.id);
-      router.replace("/projects");
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to archive project");
-    } finally {
-      setDeleting(false);
-    }
-  }
-
-  const insights = project?.aiInsights;
-  const matchScore = insights?.resumeMatchScore ?? 0;
-  const hasAnalysis = insights?.processingStatus === "done";
+  }, []);
 
   return (
-    <AppShell
-      title={project?.title || "Project"}
-      description="Job-specific hub for interview, resume, learning, and outcome tracking"
-    >
-      {loading ? <p className="text-sm text-muted-foreground animate-pulse">Loading project...</p> : null}
+    <AppShell title="Projects" description="Track your job applications, resumes, and interview prep">
+      {loading ? <p className="text-sm text-muted-foreground animate-pulse">Loading projects...</p> : null}
       {error ? <p className="text-sm text-red-500">{error}</p> : null}
 
-      {!loading && project ? (
+      {!loading && (
         <div className="space-y-6">
-          {/* ── Top actions ── */}
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <Link href="/projects">
-              <Button variant="outline" className="gap-2">
-                <ArrowLeft className="h-4 w-4" />
-                Back to Projects
+          <div className="flex items-center justify-between">
+            <p className="text-sm text-muted-foreground">
+              {projects.length} project{projects.length !== 1 ? "s" : ""}
+            </p>
+            <Link href="/projects/new">
+              <Button className="gap-2">
+                <Plus className="h-4 w-4" />
+                New Project
               </Button>
             </Link>
-            <div className="flex flex-wrap gap-2">
-              <Link href={`/projects/${project.id}/edit`}>
-                <Button variant="outline" className="gap-2">
-                  <PencilLine className="h-4 w-4" />
-                  Edit Project
-                </Button>
-              </Link>
-              <Button variant="destructive" onClick={handleDelete} disabled={deleting} className="gap-2">
-                <Trash2 className="h-4 w-4" />
-                {deleting ? "Archiving..." : "Archive"}
-              </Button>
-            </div>
           </div>
 
-          <div className="grid gap-6 lg:grid-cols-3">
-            {/* ── Left sidebar: Overview ── */}
+          {projects.length === 0 && !error ? (
             <Card>
-              <CardHeader>
-                <CardTitle>Overview</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="flex items-start gap-3">
-                  <Building2 className="mt-0.5 h-4 w-4 text-muted-foreground" />
-                  <div>
-                    <p className="text-sm font-medium">Company</p>
-                    <p className="text-sm text-muted-foreground">{project.companyName || "Not added"}</p>
-                  </div>
+              <CardContent className="flex flex-col items-center gap-4 py-12 text-center">
+                <Sparkles className="h-10 w-10 text-muted-foreground/50" />
+                <div>
+                  <p className="font-medium">No projects yet</p>
+                  <p className="text-sm text-muted-foreground">Create your first project to start tracking a job application.</p>
                 </div>
-
-                <div className="flex items-start gap-3">
-                  <Briefcase className="mt-0.5 h-4 w-4 text-muted-foreground" />
-                  <div>
-                    <p className="text-sm font-medium">Role</p>
-                    <p className="text-sm text-muted-foreground">{project.jobRole || "Not added"}</p>
-                  </div>
-                </div>
-
-                {/* ATS Score card */}
-                <div className="rounded-xl border p-4">
-                  {hasAnalysis ? (
-                    <div className="space-y-2">
-                      <p className="text-sm font-medium">ATS Match Score</p>
-                      <div className="flex items-baseline gap-2">
-                        <span className={cn("text-3xl font-bold", scoreColor(matchScore))}>
-                          {matchScore}%
-                        </span>
-                        <span className={cn("text-sm", scoreColor(matchScore))}>
-                          {scoreLabel(matchScore)}
-                        </span>
-                      </div>
-                      <div className="h-2 w-full overflow-hidden rounded-full bg-muted/50">
-                        <div
-                          className={cn(
-                            "h-full rounded-full transition-all",
-                            matchScore >= 80 ? "bg-green-500" :
-                            matchScore >= 60 ? "bg-yellow-500" :
-                            matchScore >= 40 ? "bg-orange-400" : "bg-red-500"
-                          )}
-                          style={{ width: `${matchScore}%` }}
-                        />
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="space-y-2">
-                      <p className="text-sm font-medium">Resume Match Score</p>
-                      <p className="text-sm text-muted-foreground">
-                        {project.resumeText
-                          ? "Analysis pending — go to Resume Analyzer to run it"
-                          : "Upload a resume to get your ATS match score"}
-                      </p>
-                    </div>
-                  )}
-                </div>
-
-                {/* Quick insights */}
-                {hasAnalysis && (
-                  <div className="space-y-2">
-                    {(insights?.resumeStrengths?.length ?? 0) > 0 && (
-                      <div className="flex items-start gap-2 rounded-lg bg-green-500/5 p-2.5">
-                        <CheckCircle2 className="mt-0.5 h-3.5 w-3.5 text-green-500 shrink-0" />
-                        <p className="text-xs text-muted-foreground">
-                          {insights!.resumeStrengths![0]}
-                        </p>
-                      </div>
-                    )}
-                    {(insights?.missingKeywords?.length ?? 0) > 0 && (
-                      <div className="flex items-start gap-2 rounded-lg bg-red-500/5 p-2.5">
-                        <XCircle className="mt-0.5 h-3.5 w-3.5 text-red-500 shrink-0" />
-                        <p className="text-xs text-muted-foreground">
-                          Missing: {insights!.missingKeywords!.slice(0, 3).join(", ")}
-                          {(insights!.missingKeywords!.length > 3) && ` +${insights!.missingKeywords!.length - 3} more`}
-                        </p>
-                      </div>
-                    )}
-                  </div>
-                )}
-
-                {/* Outcome */}
-                <div className="rounded-xl border p-3">
-                  <p className="text-sm font-medium">Current Outcome</p>
-                  <p className="text-sm capitalize text-muted-foreground">
-                    {project.outcome?.status || "applied"}
-                  </p>
-                </div>
-
-                {/* Navigation buttons */}
-                <div className="grid gap-2">
-                  <Link href={`/projects/${project.id}/resume`}>
-                    <Button className="w-full gap-2">
-                      <Sparkles className="h-4 w-4" />
-                      Resume Analyzer
-                    </Button>
-                  </Link>
-                  <Link href={`/projects/${project.id}/interview`}>
-                    <Button variant="outline" className="w-full gap-2">
-                      <MessageSquare className="h-4 w-4" />
-                      Mock Interview
-                    </Button>
-                  </Link>
-                  <Link href={`/projects/${project.id}/learning`}>
-                    <Button variant="outline" className="w-full gap-2">
-                      <BookOpen className="h-4 w-4" />
-                      Learning Mode
-                    </Button>
-                  </Link>
-                  <Link href={`/projects/${project.id}/outcome`}>
-                    <Button variant="outline" className="w-full gap-2">
-                      <Target className="h-4 w-4" />
-                      Update Outcome
-                    </Button>
-                  </Link>
-                </div>
+                <Link href="/projects/new">
+                  <Button className="gap-2">
+                    <Plus className="h-4 w-4" />
+                    New Project
+                  </Button>
+                </Link>
               </CardContent>
             </Card>
+          ) : (
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {projects.map((project) => {
+                const score = project.aiInsights?.resumeMatchScore;
+                const hasDoneAnalysis = project.aiInsights?.processingStatus === "done";
 
-            {/* ── Right content ── */}
-            <div className="space-y-6 lg:col-span-2">
-              {/* Job Description */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <FileText className="h-5 w-5 text-primary" />
-                    Job Description
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  {project.jobDescription ? (
-                    <div className="max-h-80 overflow-y-auto whitespace-pre-wrap rounded-lg bg-muted/30 p-4 text-sm text-muted-foreground leading-relaxed">
-                      {project.jobDescription}
-                    </div>
-                  ) : (
-                    <p className="text-sm text-muted-foreground">
-                      No job description added yet.{" "}
-                      <Link href={`/projects/${project.id}/edit`} className="text-primary underline">
-                        Edit project
-                      </Link>{" "}
-                      to add one.
-                    </p>
-                  )}
-                </CardContent>
-              </Card>
+                return (
+                  <Link key={project.id} href={`/projects/${project.id}`}>
+                    <Card className="h-full transition-colors hover:border-primary/50">
+                      <CardHeader className="pb-2">
+                        <CardTitle className="line-clamp-1 text-base">{project.title}</CardTitle>
+                      </CardHeader>
+                      <CardContent className="space-y-3">
+                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                          <Building2 className="h-3.5 w-3.5 shrink-0" />
+                          <span className="line-clamp-1">{project.companyName || "No company"}</span>
+                        </div>
+                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                          <Briefcase className="h-3.5 w-3.5 shrink-0" />
+                          <span className="line-clamp-1">{project.jobRole || "No role"}</span>
+                        </div>
 
-              {/* Parsed Resume Text (collapsible, read-only) */}
-              <Card>
-                <CardHeader
-                  className="cursor-pointer select-none"
-                  onClick={() => setShowResume((v) => !v)}
-                >
-                  <CardTitle className="flex items-center justify-between">
-                    <span className="flex items-center gap-2">
-                      <FileText className="h-5 w-5 text-primary" />
-                      Parsed Resume Text
-                    </span>
-                    <span className="flex items-center gap-2">
-                      {project.resumeText ? (
-                        <span className="rounded-full bg-green-500/10 px-2 py-0.5 text-xs font-medium text-green-600">
-                          Extracted
-                        </span>
-                      ) : (
-                        <span className="rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">
-                          No resume
-                        </span>
-                      )}
-                      {showResume ? (
-                        <ChevronUp className="h-4 w-4 text-muted-foreground" />
-                      ) : (
-                        <ChevronDown className="h-4 w-4 text-muted-foreground" />
-                      )}
-                    </span>
-                  </CardTitle>
-                </CardHeader>
-                {showResume && (
-                  <CardContent>
-                    {project.resumeText ? (
-                      <div className="max-h-96 overflow-y-auto whitespace-pre-wrap rounded-lg bg-muted/30 p-4 text-sm text-muted-foreground leading-relaxed">
-                        {project.resumeText}
-                      </div>
-                    ) : (
-                      <p className="text-sm text-muted-foreground">
-                        No resume uploaded yet. Go to{" "}
-                        <Link href={`/projects/${project.id}/resume`} className="text-primary underline">
-                          Resume Analyzer
-                        </Link>{" "}
-                        or{" "}
-                        <Link href={`/projects/${project.id}/edit`} className="text-primary underline">
-                          Edit Project
-                        </Link>{" "}
-                        to upload a PDF.
-                      </p>
-                    )}
-                  </CardContent>
-                )}
-              </Card>
+                        <div className="flex items-center justify-between pt-1">
+                          <span className="rounded-full bg-muted px-2 py-0.5 text-xs capitalize text-muted-foreground">
+                            {project.outcome?.status || "applied"}
+                          </span>
+                          {hasDoneAnalysis && score !== undefined ? (
+                            <span className={cn("text-sm font-semibold", scoreColor(score))}>
+                              {score}% match
+                            </span>
+                          ) : (
+                            <span className="text-xs text-muted-foreground">No analysis</span>
+                          )}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </Link>
+                );
+              })}
             </div>
-          </div>
+          )}
         </div>
-      ) : null}
+      )}
     </AppShell>
   );
 }
