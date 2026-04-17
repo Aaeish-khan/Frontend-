@@ -18,6 +18,8 @@ import {
   User,
   Type,
 } from "lucide-react";
+import { motion } from "framer-motion";
+import { staggerContainer, staggerItem, viewportOnce } from "@/lib/animations";
 
 export default function NewProjectPage() {
   const router = useRouter();
@@ -100,8 +102,15 @@ export default function NewProjectPage() {
 
   return (
     <AppShell title="Create Project" description="Set up a new job application project with AI-powered analysis">
-      <form onSubmit={handleSubmit} className="max-w-4xl space-y-6">
+      <motion.form
+        onSubmit={handleSubmit}
+        className="max-w-4xl space-y-6"
+        initial="hidden"
+        animate="visible"
+        variants={staggerContainer}
+      >
         {/* ── Project details ── */}
+        <motion.div variants={staggerItem}>
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -121,7 +130,7 @@ export default function NewProjectPage() {
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
                 placeholder="e.g. Frontend Developer at Acme Corp"
-                className="w-full rounded-xl border bg-background px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
+                className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2.5 text-sm placeholder:text-muted-foreground/60 transition-all duration-300 focus:outline-none focus:border-primary/60 focus:ring-2 focus:ring-primary/25 focus:shadow-[0_0_20px_rgba(99,102,241,0.15)]"
               />
             </div>
 
@@ -137,7 +146,7 @@ export default function NewProjectPage() {
                   value={companyName}
                   onChange={(e) => setCompanyName(e.target.value)}
                   placeholder="e.g. Acme Corp"
-                  className="w-full rounded-xl border bg-background px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
+                  className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2.5 text-sm placeholder:text-muted-foreground/60 transition-all duration-300 focus:outline-none focus:border-primary/60 focus:ring-2 focus:ring-primary/25"
                 />
               </div>
               <div>
@@ -151,14 +160,16 @@ export default function NewProjectPage() {
                   value={jobRole}
                   onChange={(e) => setJobRole(e.target.value)}
                   placeholder="e.g. Senior Frontend Developer"
-                  className="w-full rounded-xl border bg-background px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
+                  className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2.5 text-sm placeholder:text-muted-foreground/60 transition-all duration-300 focus:outline-none focus:border-primary/60 focus:ring-2 focus:ring-primary/25"
                 />
               </div>
             </div>
           </CardContent>
         </Card>
+        </motion.div>
 
         {/* ── Job Description ── */}
+        <motion.div variants={staggerItem}>
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -172,15 +183,17 @@ export default function NewProjectPage() {
               onChange={(e) => setJobDescription(e.target.value)}
               rows={10}
               placeholder="Paste the full job description here. The AI will extract keywords, required skills, and seniority level to match against your resume..."
-              className="w-full rounded-xl border bg-background px-3 py-2.5 text-sm leading-relaxed focus:outline-none focus:ring-2 focus:ring-primary/30 resize-none"
+              className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2.5 text-sm leading-relaxed placeholder:text-muted-foreground/60 transition-all duration-300 focus:outline-none focus:border-primary/60 focus:ring-2 focus:ring-primary/25 focus:shadow-[0_0_20px_rgba(99,102,241,0.15)] resize-none"
             />
             <p className="mt-1.5 text-xs text-muted-foreground">
               {jobDescription.length} characters — the more detail, the better the AI analysis
             </p>
           </CardContent>
         </Card>
+        </motion.div>
 
         {/* ── Resume PDF Upload ── */}
+        <motion.div variants={staggerItem}>
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -196,10 +209,10 @@ export default function NewProjectPage() {
                 onDrop={handleDrop}
                 onClick={() => inputRef.current?.click()}
                 className={cn(
-                  "relative flex min-h-48 cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed transition-all",
+                  "relative flex min-h-48 cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed transition-all duration-300",
                   dragging
-                    ? "border-primary bg-primary/5 scale-[1.01]"
-                    : "border-border hover:border-primary/50 hover:bg-muted/30"
+                    ? "border-primary bg-primary/10 scale-[1.01] shadow-[0_0_30px_rgba(99,102,241,0.2)]"
+                    : "border-white/15 hover:border-primary/50 hover:bg-white/3"
                 )}
               >
                 <input
@@ -210,7 +223,7 @@ export default function NewProjectPage() {
                   onChange={handleFileChange}
                 />
                 <div className="flex flex-col items-center gap-3 px-4 text-center">
-                  <div className="flex h-14 w-14 items-center justify-center rounded-full bg-primary/10">
+                  <div className="flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-br from-primary/20 to-purple-500/10 border border-primary/20">
                     <Upload className="h-7 w-7 text-primary" />
                   </div>
                   <div>
@@ -223,9 +236,9 @@ export default function NewProjectPage() {
                 </div>
               </div>
             ) : (
-              <div className="flex flex-col gap-4 rounded-xl border bg-muted/30 p-4 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex flex-col gap-4 rounded-xl border border-white/10 bg-white/5 p-4 sm:flex-row sm:items-center sm:justify-between">
                 <div className="flex min-w-0 items-center gap-3">
-                  <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-primary/10">
+                  <div className="icon-box flex h-12 w-12 items-center justify-center rounded-lg bg-gradient-to-br from-primary/20 to-purple-500/10 border border-primary/20">
                     <FileText className="h-6 w-6 text-primary" />
                   </div>
                   <div className="min-w-0">
@@ -245,9 +258,11 @@ export default function NewProjectPage() {
             )}
           </CardContent>
         </Card>
+        </motion.div>
 
         {/* ── What happens next ── */}
-        <Card className="border-primary/20 bg-primary/5">
+        <motion.div variants={staggerItem}>
+        <Card className="border-primary/20 bg-gradient-to-br from-primary/5 to-purple-500/5">
           <CardContent className="pt-5">
             <p className="mb-3 text-sm font-semibold text-primary">
               When you create this project, the AI will automatically:
@@ -268,15 +283,20 @@ export default function NewProjectPage() {
             </ul>
           </CardContent>
         </Card>
+        </motion.div>
 
         {/* ── Error & Submit ── */}
         {error ? (
-          <p className="rounded-lg bg-red-500/10 px-4 py-2.5 text-sm text-red-600 dark:text-red-400">
+          <motion.p
+            initial={{ opacity: 0, y: -4 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="rounded-lg border border-red-500/20 bg-red-500/10 px-4 py-2.5 text-sm text-red-400"
+          >
             {error}
-          </p>
+          </motion.p>
         ) : null}
 
-        <div className="flex flex-col gap-3 sm:flex-row">
+        <motion.div variants={staggerItem} className="flex flex-col gap-3 sm:flex-row">
           <Button type="submit" disabled={loading} className="w-full gap-2 sm:min-w-[200px] sm:w-auto">
             {loading ? (
               <>
@@ -298,8 +318,8 @@ export default function NewProjectPage() {
           >
             Cancel
           </Button>
-        </div>
-      </form>
+        </motion.div>
+      </motion.form>
     </AppShell>
   );
 }

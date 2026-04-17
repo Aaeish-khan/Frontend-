@@ -61,14 +61,16 @@ export function ThemeSettings() {
                     key={option.key}
                     type="button"
                     onClick={() => setTheme(option.key)}
-                    className={`rounded-xl border p-4 text-left transition-all ${
+                    className={`rounded-xl border p-4 text-left transition-all duration-200 ${
                         isActive
-                        ? "border-primary bg-primary/5 ring-1 ring-primary"
-                        : "border-border hover:border-primary/40 hover:bg-muted/40"
+                        ? "border-primary/60 bg-gradient-to-br from-primary/10 to-purple-500/5 shadow-[0_0_20px_rgba(99,102,241,0.1)]"
+                        : "border-white/8 hover:border-primary/40 hover:bg-white/3"
                     }`}
                     >
-                    <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
-                        <Icon className="h-5 w-5 text-primary" />
+                    <div className={`mb-3 flex h-10 w-10 items-center justify-center rounded-lg transition-all ${
+                        isActive ? "bg-gradient-to-br from-primary to-purple-600 shadow-lg shadow-primary/30" : "bg-white/5 border border-white/10"
+                    }`}>
+                        <Icon className={`h-5 w-5 ${isActive ? "text-white" : "text-primary"}`} />
                     </div>
 
                     <h4 className="text-sm font-semibold">{option.label}</h4>

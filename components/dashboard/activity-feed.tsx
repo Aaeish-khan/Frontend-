@@ -45,7 +45,7 @@ export function ActivityFeed() {
           return (
             <div key={activity.id} className="flex gap-4">
               <div className={cn(
-                "flex h-10 w-10 shrink-0 items-center justify-center rounded-lg",
+                "icon-box flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-white/8",
                 typeColors[activity.type]
               )}>
                 <Icon className="h-5 w-5" />

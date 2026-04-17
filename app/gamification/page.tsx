@@ -23,6 +23,8 @@ import {
   Calendar
 } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { motion } from "framer-motion"
+import { staggerContainer, staggerItem, cardVariants, viewportOnce } from "@/lib/animations"
 
 const badgeIcons: Record<string, LucideIcon> = {
   rocket: Rocket,
@@ -73,8 +75,14 @@ export default function GamificationPage() {
       title="Gamification"
       description="Track your progress, earn badges, and level up"
     >
-      <div className="space-y-6">
+      <motion.div
+        className="space-y-6"
+        initial="hidden"
+        animate="visible"
+        variants={staggerContainer}
+      >
         {/* Level & XP Overview */}
+        <motion.div variants={staggerItem}>
         <Card className="overflow-hidden">
           <div className="bg-gradient-to-r from-primary/10 via-primary/5 to-transparent p-6">
             <div className="flex flex-col items-center gap-6 md:flex-row">
@@ -90,9 +98,11 @@ export default function GamificationPage() {
                   {currentUser.xp.toLocaleString()} / {currentUser.xpToNextLevel.toLocaleString()} XP
                 </p>
                 <div className="mt-4 h-3 w-full max-w-md overflow-hidden rounded-full bg-muted">
-                  <div 
-                    className="h-full rounded-full bg-primary transition-all"
-                    style={{ width: `${xpProgress}%` }}
+                  <motion.div 
+                    className="h-full rounded-full bg-gradient-to-r from-indigo-500 to-purple-600"
+                    initial={{ width: 0 }}
+                    animate={{ width: `${xpProgress}%` }}
+                    transition={{ duration: 1, ease: "easeOut", delay: 0.4 }}
                   />
                 </div>
                 <p className="mt-2 text-sm text-muted-foreground">
@@ -118,9 +128,10 @@ export default function GamificationPage() {
             </div>
           </div>
         </Card>
+        </motion.div>
 
         {/* Challenges */}
-        <div className="grid gap-6 lg:grid-cols-2">
+        <motion.div variants={staggerItem} className="grid gap-6 lg:grid-cols-2">
           {/* Weekly Challenge */}
           <Card>
             <CardHeader>
@@ -204,9 +215,10 @@ export default function GamificationPage() {
               ))}
             </CardContent>
           </Card>
-        </div>
+        </motion.div>
 
         {/* Badges Section */}
+        <motion.div variants={staggerItem}>
         <Card>
           <CardHeader>
             <CardTitle>Earned Badges ({earnedBadges.length})</CardTitle>
@@ -216,11 +228,13 @@ export default function GamificationPage() {
               {earnedBadges.map((badge) => {
                 const Icon = badgeIcons[badge.icon] || Award
                 return (
-                  <div
+                  <motion.div
                     key={badge.id}
-                    className="flex flex-col items-center gap-2 rounded-lg border border-primary/20 bg-primary/5 p-4 text-center"
+                    variants={cardVariants}
+                    whileHover="hover"
+                    className="flex flex-col items-center gap-2 rounded-lg border border-primary/20 bg-gradient-to-b from-primary/5 to-transparent p-4 text-center"
                   >
-                    <div className="flex h-14 w-14 items-center justify-center rounded-full bg-primary/10">
+                    <div className="flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-br from-primary/20 to-purple-500/10 border border-primary/20">
                       <Icon className="h-7 w-7 text-primary" />
                     </div>
                     <div>
@@ -232,14 +246,16 @@ export default function GamificationPage() {
                     <p className="text-xs text-primary">
                       Earned {new Date(badge.earnedAt!).toLocaleDateString()}
                     </p>
-                  </div>
+                  </motion.div>
                 )
               })}
             </div>
           </CardContent>
         </Card>
+        </motion.div>
 
         {/* In Progress Badges */}
+        <motion.div variants={staggerItem}>
         <Card>
           <CardHeader>
             <CardTitle>Badges In Progress ({inProgressBadges.length})</CardTitle>
@@ -249,11 +265,13 @@ export default function GamificationPage() {
               {inProgressBadges.map((badge) => {
                 const Icon = badgeIcons[badge.icon] || Award
                 return (
-                  <div
+                  <motion.div
                     key={badge.id}
-                    className="flex items-center gap-4 rounded-lg border border-border p-4"
+                    variants={cardVariants}
+                    whileHover="hover"
+                    className="flex items-center gap-4 rounded-lg border border-white/8 bg-white/3 p-4 hover:border-primary/30"
                   >
-                    <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-muted">
+                    <div className="icon-box flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-white/10 to-white/5 border border-white/10">
                       <Icon className="h-6 w-6 text-muted-foreground" />
                     </div>
                     <div className="flex-1 min-w-0">
@@ -271,14 +289,16 @@ export default function GamificationPage() {
                         <span className="text-xs font-medium">{badge.progress}%</span>
                       </div>
                     </div>
-                  </div>
+                  </motion.div>
                 )
               })}
             </div>
           </CardContent>
         </Card>
+        </motion.div>
 
         {/* Leaderboard Preview */}
+        <motion.div variants={staggerItem}>
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -295,11 +315,12 @@ export default function GamificationPage() {
                 { rank: 4, name: "Fatima Khan", xp: 2650, avatar: "FK" },
                 { rank: 5, name: "Omar Malik", xp: 2400, avatar: "OM" },
               ].map((user) => (
-                <div
+                <motion.div
                   key={user.rank}
+                  variants={staggerItem}
                   className={cn(
-                    "flex items-center gap-4 rounded-lg border p-3",
-                    user.isYou && "border-primary bg-primary/5"
+                    "flex items-center gap-4 rounded-lg border p-3 transition-all",
+                    user.isYou ? "border-primary/40 bg-gradient-to-r from-primary/10 to-purple-500/5" : "border-white/8 hover:border-white/15"
                   )}
                 >
                   <span className={cn(
@@ -321,12 +342,14 @@ export default function GamificationPage() {
                     </p>
                   </div>
                   <span className="font-semibold text-primary">{user.xp.toLocaleString()} XP</span>
-                </div>
+                </motion.div>
               ))}
             </div>
           </CardContent>
         </Card>
-      </div>
+        </motion.div>
+
+      </motion.div>
     </AppShell>
   )
 }

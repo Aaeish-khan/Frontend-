@@ -17,170 +17,172 @@ import {
   Twitter,
   ChevronDown,
 } from "lucide-react"
+import { motion } from "framer-motion"
+import { staggerContainer, staggerItem, viewportOnce } from "@/lib/animations"
 
 export default function ContactPage() {
   return (
     <>
       <LandingHeader />
 
-      <main className="min-h-screen bg-background px-6 py-16">
-        <div className="mx-auto max-w-5xl text-center">
-          <h1 className="text-4xl font-semibold text-foreground/80">Contact Us</h1>
-          <p className="mt-4 text-base text-muted-foreground">
-            Have questions about AI Career Coach? We&apos;d love to hear from you.
-            Send us a message and we&apos;ll respond as soon as possible.
-          </p>
+      <main className="relative min-h-screen bg-background px-6 py-16 overflow-hidden">
+        {/* Ambient orbs */}
+        <div className="pointer-events-none absolute inset-0">
+          <div className="orb orb-cyan absolute top-0 right-1/3 w-[500px] h-[500px] opacity-[0.05]" />
+          <div className="orb orb-blue absolute bottom-0 left-1/4 w-[400px] h-[400px] opacity-[0.04]" />
         </div>
 
-        <div className="mx-auto mt-10 grid max-w-7xl gap-8 lg:grid-cols-[2fr_1fr]">
+        <motion.div
+          className="mx-auto max-w-5xl text-center"
+          initial="hidden"
+          animate="visible"
+          variants={staggerContainer}
+        >
+          <motion.h1 variants={staggerItem} className="text-4xl font-bold tracking-tight">
+            <span className="gradient-text">Contact Us</span>
+          </motion.h1>
+          <motion.p variants={staggerItem} className="mt-4 text-base text-muted-foreground leading-relaxed">
+            Have questions about AI Career Coach? We&apos;d love to hear from you.
+            Send us a message and we&apos;ll respond as soon as possible.
+          </motion.p>
+        </motion.div>
+
+        <motion.div
+          className="mx-auto mt-10 grid max-w-7xl gap-8 lg:grid-cols-[2fr_1fr]"
+          initial="hidden"
+          whileInView="visible"
+          viewport={viewportOnce}
+          variants={staggerContainer}
+        >
           {/* Left side */}
-          <Card className="rounded-xl bg-card">
-            <CardContent className="p-6">
-              <h2 className="text-2xl font-semibold text-foreground/80">Send us a Message</h2>
-              <p className="mt-2 text-sm text-muted-foreground">
-                Fill out the form below and we&apos;ll get back to you within 24 hours.
-              </p>
-
-              <form className="mt-8 space-y-6">
-                <div className="grid gap-6 md:grid-cols-2">
-                  <div>
-                    <label className="mb-2 block text-sm font-medium">Full Name *</label>
-                    <Input placeholder="Your full name" className="h-12" />
-                  </div>
-
-                  <div>
-                    <label className="mb-2 block text-sm font-medium">Email Address *</label>
-                    <Input placeholder="your.email@example.com" className="h-12" />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="mb-2 block text-sm font-medium">Category</label>
-                  <div className="relative max-w-xs">
-                    <select className="h-12 w-full appearance-none rounded-md border border-input bg-background px-3 text-sm text-muted-foreground">
-                      <option>Select a category</option>
-                      <option>General Inquiry</option>
-                      <option>Project Feedback</option>
-                      <option>Technical Question</option>
-                      <option>Collaboration</option>
-                    </select>
-                    <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="mb-2 block text-sm font-medium">Subject *</label>
-                  <Input placeholder="Brief description of your inquiry" className="h-12" />
-                </div>
-
-                <div>
-                  <label className="mb-2 block text-sm font-medium">Message *</label>
-                  <Textarea
-                    placeholder="Please provide details about your inquiry, feedback, or question..."
-                    className="min-h-[180px] resize-none"
-                  />
-                </div>
-
-                <Button className="h-14 w-full text-base font-semibold">
-                  <Send className="mr-2 h-5 w-5" />
-                  Send Message
-                </Button>
-
-                <p className="text-center text-sm text-muted-foreground">
-                  * Required fields. We&apos;ll respond to your message within 24 hours.
+          <motion.div variants={staggerItem}>
+            <Card className="rounded-xl">
+              <CardContent className="p-6">
+                <h2 className="text-2xl font-semibold">Send us a Message</h2>
+                <p className="mt-2 text-sm text-muted-foreground">
+                  Fill out the form below and we&apos;ll get back to you within 24 hours.
                 </p>
-              </form>
-            </CardContent>
-          </Card>
+
+                <form className="mt-8 space-y-6">
+                  <div className="grid gap-6 md:grid-cols-2">
+                    <div>
+                      <label className="mb-2 block text-sm font-medium text-foreground/90">Full Name *</label>
+                      <Input placeholder="Your full name" className="h-12" />
+                    </div>
+
+                    <div>
+                      <label className="mb-2 block text-sm font-medium text-foreground/90">Email Address *</label>
+                      <Input placeholder="your.email@example.com" className="h-12" />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="mb-2 block text-sm font-medium text-foreground/90">Category</label>
+                    <div className="relative max-w-xs">
+                      <select className="h-12 w-full appearance-none rounded-md border border-white/10 bg-white/5 px-3 text-sm text-muted-foreground transition-all duration-300 focus:border-primary/60 focus:ring-2 focus:ring-primary/25 focus:outline-none">
+                        <option>Select a category</option>
+                        <option>General Inquiry</option>
+                        <option>Project Feedback</option>
+                        <option>Technical Question</option>
+                        <option>Collaboration</option>
+                      </select>
+                      <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="mb-2 block text-sm font-medium text-foreground/90">Subject *</label>
+                    <Input placeholder="Brief description of your inquiry" className="h-12" />
+                  </div>
+
+                  <div>
+                    <label className="mb-2 block text-sm font-medium text-foreground/90">Message *</label>
+                    <Textarea
+                      placeholder="Please provide details about your inquiry, feedback, or question..."
+                      className="min-h-[180px] resize-none"
+                    />
+                  </div>
+
+                  <Button className="h-14 w-full text-base font-semibold">
+                    <Send className="mr-2 h-5 w-5" />
+                    Send Message
+                  </Button>
+
+                  <p className="text-center text-sm text-muted-foreground">
+                    * Required fields. We&apos;ll respond to your message within 24 hours.
+                  </p>
+                </form>
+              </CardContent>
+            </Card>
+          </motion.div>
 
           {/* Right side */}
           <div className="space-y-6">
-            <Card className="rounded-xl bg-card">
-              <CardContent className="p-6">
-                <h2 className="text-2xl font-semibold text-foreground/80">Get in Touch</h2>
-                <p className="mt-2 text-sm text-muted-foreground">Reach out to us directly</p>
+            <motion.div variants={staggerItem}>
+              <Card className="rounded-xl">
+                <CardContent className="p-6">
+                  <h2 className="text-2xl font-semibold">Get in Touch</h2>
+                  <p className="mt-2 text-sm text-muted-foreground">Reach out to us directly</p>
 
-                <div className="mt-6 space-y-6">
-                  <div className="flex gap-4">
-                    <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10">
-                      <Mail className="h-5 w-5 text-primary" />
-                    </div>
-                    <div>
-                      <h3 className="text-lg font-medium">Email</h3>
-                      <p className="text-sm text-muted-foreground">team.aicareercoach@gmail.com</p>
-                    </div>
+                  <div className="mt-6 space-y-6">
+                    {[
+                      { icon: Mail, label: "Email", value: "team.aicareercoach@gmail.com", color: "from-primary/20 to-purple-500/10 border-primary/20", iconColor: "text-primary" },
+                      { icon: Phone, label: "Phone", value: "03123456789", color: "from-cyan-500/20 to-blue-500/10 border-cyan-500/20", iconColor: "text-cyan-400" },
+                      { icon: MapPin, label: "Location", value: "Computer Science Department, Sukkur IBA University, Sindh, Pakistan", color: "from-green-500/20 to-emerald-500/10 border-green-500/20", iconColor: "text-green-400" },
+                      { icon: Clock, label: "Response Time", value: "Within 24 hours", color: "from-yellow-500/20 to-orange-500/10 border-yellow-500/20", iconColor: "text-yellow-400" },
+                    ].map((item) => (
+                      <div key={item.label} className="flex gap-4">
+                        <div className={`icon-box flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br ${item.color} border`}>
+                          <item.icon className={`h-5 w-5 ${item.iconColor}`} />
+                        </div>
+                        <div>
+                          <h3 className="text-base font-medium">{item.label}</h3>
+                          <p className="text-sm text-muted-foreground">{item.value}</p>
+                        </div>
+                      </div>
+                    ))}
                   </div>
+                </CardContent>
+              </Card>
+            </motion.div>
 
-                  <div className="flex gap-4">
-                    <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10">
-                      <Phone className="h-5 w-5 text-primary" />
-                    </div>
-                    <div>
-                      <h3 className="text-lg font-medium">Phone</h3>
-                      <p className="text-sm text-muted-foreground">03123456789</p>
-                    </div>
+            <motion.div variants={staggerItem}>
+              <Card className="rounded-xl">
+                <CardContent className="p-6">
+                  <h2 className="text-2xl font-semibold">Follow Our Journey</h2>
+                  <p className="mt-2 text-sm text-muted-foreground">
+                    Stay updated with our project development
+                  </p>
+
+                  <div className="mt-6 space-y-4">
+                    {[
+                      { icon: Github, label: "View on GitHub" },
+                      { icon: Linkedin, label: "LinkedIn Page" },
+                      { icon: Twitter, label: "Twitter Updates" },
+                    ].map((item) => (
+                      <div key={item.label} className="flex items-center gap-4 rounded-lg border border-white/8 bg-white/3 p-4 hover:border-primary/30 hover:bg-white/5 transition-all duration-200 cursor-pointer">
+                        <item.icon className="h-5 w-5 text-muted-foreground" />
+                        <span className="text-base">{item.label}</span>
+                      </div>
+                    ))}
                   </div>
-
-                  <div className="flex gap-4">
-                    <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10">
-                      <MapPin className="h-5 w-5 text-primary" />
-                    </div>
-                    <div>
-                      <h3 className="text-lg font-medium">Location</h3>
-                      <p className="text-sm text-muted-foreground">
-                        Computer Science Department
-                        <br />
-                        Sukkur IBA University, Sindh, Pakistan
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="flex gap-4">
-                    <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10">
-                      <Clock className="h-5 w-5 text-primary" />
-                    </div>
-                    <div>
-                      <h3 className="text-lg font-medium">Response Time</h3>
-                      <p className="text-sm text-muted-foreground">Within 24 hours</p>
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card className="rounded-xl bg-card">
-              <CardContent className="p-6">
-                <h2 className="text-2xl font-semibold text-foreground/80">Follow Our Journey</h2>
-                <p className="mt-2 text-sm text-muted-foreground">
-                  Stay updated with our project development
-                </p>
-
-                <div className="mt-6 space-y-4">
-                  <div className="flex items-center gap-4 rounded-lg border p-4">
-                    <Github className="h-5 w-5 text-muted-foreground" />
-                    <span className="text-base">View on GitHub</span>
-                  </div>
-
-                  <div className="flex items-center gap-4 rounded-lg border p-4">
-                    <Linkedin className="h-5 w-5 text-muted-foreground" />
-                    <span className="text-base">LinkedIn Page</span>
-                  </div>
-
-                  <div className="flex items-center gap-4 rounded-lg border p-4">
-                    <Twitter className="h-5 w-5 text-muted-foreground" />
-                    <span className="text-base">Twitter Updates</span>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+                </CardContent>
+              </Card>
+            </motion.div>
           </div>
-        </div>
+        </motion.div>
 
         {/* Full-width Quick Questions */}
-        <div className="mx-auto mt-8 max-w-7xl">
-          <Card className="rounded-xl bg-card">
+        <motion.div
+          className="mx-auto mt-8 max-w-7xl"
+          initial="hidden"
+          whileInView="visible"
+          viewport={viewportOnce}
+          variants={staggerItem}
+        >
+          <Card className="rounded-xl">
             <CardContent className="p-6">
-              <h2 className="text-2xl font-semibold text-foreground/80">Quick Questions?</h2>
+              <h2 className="text-2xl font-semibold">Quick Questions?</h2>
 
               <div className="mt-6 grid gap-6 md:grid-cols-2">
                 <div>
@@ -233,7 +235,8 @@ export default function ContactPage() {
               </div>
             </CardContent>
           </Card>
-        </div>
+        </motion.div>
+
       </main>
 
       <LandingFooter />

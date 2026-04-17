@@ -22,6 +22,8 @@ import {
   Plus
 } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { motion } from "framer-motion"
+import { staggerContainer, staggerItem, cardVariants } from "@/lib/animations"
 
 type Tab = "received" | "given" | "requests"
 
@@ -89,9 +91,14 @@ export default function PeerReviewPage() {
       title="Peer Review"
       description="Get feedback from peers and help others improve"
     >
-      <div className="space-y-6">
+      <motion.div
+        className="space-y-6"
+        initial="hidden"
+        animate="visible"
+        variants={staggerContainer}
+      >
         {/* Stats */}
-        <div className="grid gap-4 md:grid-cols-3">
+        <motion.div variants={staggerItem} className="grid gap-4 md:grid-cols-3">
           <Card>
             <CardContent className="flex items-center gap-4 p-4">
               <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-primary/10">
@@ -125,7 +132,7 @@ export default function PeerReviewPage() {
               </div>
             </CardContent>
           </Card>
-        </div>
+        </motion.div>
 
         <div className="flex items-center justify-between">
           {/* Tabs */}
@@ -374,7 +381,7 @@ export default function PeerReviewPage() {
             </Card>
           </div>
         )}
-      </div>
+      </motion.div>
     </AppShell>
   )
 }
