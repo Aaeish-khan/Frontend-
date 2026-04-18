@@ -295,6 +295,146 @@ export async function analyzeProjectResumeRequest(
 
 // ─── Learning ──────────────────────────────────────────────────────────────────
 
-export async function getProjectLearningPlanRequest(id: string) {
+export type LearningModule = {
+  id: string;
+  title: string;
+  objective: string;
+  whyItMatters: string;
+  category: string;
+  priority: "high" | "medium" | "low";
+  estimatedMinutes: number;
+  prerequisites: string[];
+  outcomes: string[];
+  status: "not_started" | "in_progress" | "completed" | "needs_review";
+  orderIndex: number;
+  resources: { label: string; url: string; platform: string; type: string }[];
+  quiz: { id: string; question: string; options: string[]; difficulty: string }[];
+  quizAttempts: { attemptedAt: string; score: number; passed: boolean }[];
+  bestQuizScore: number | null;
+  labSpec?: {
+    title: string;
+    description: string;
+    starterPrompt: string;
+    difficulty: string;
+    platformHint: string;
+    completed: boolean;
+  };
+};
+
+export type LearningPlan = {
+  _id: string;
+  projectId: string;
+  targetRole: string;
+  roleFocus: string;
+  diagnosis: {
+    weaknesses: {
+      key: string;
+      category: string;
+      label: string;
+      severity: string;
+      urgency: string;
+      explanation: string;
+      missingSkills: string[];
+    }[];
+    strengths: string[];
+    generatedAt: string;
+  };
+  objectives: {
+    id: string;
+    title: string;
+    category: string;
+    priority: string;
+    linkedWeaknessKeys: string[];
+    successCriteria: string[];
+  }[];
+  modules: LearningModule[];
+  progress: {
+    completedModules: number;
+    totalModules: number;
+    readinessScore: number;
+    nextBestActions: string[];
+    lastUpdatedAt: string;
+  };
+  version: number;
+};
+
+export type QuizQuestion = {
+  id: string;
+  question: string;
+  options: string[];
+  difficulty: string;
+};
+
+export type QuizResult = {
+  score: number;
+  correct: number;
+  total: number;
+  passed: boolean;
+  feedback: {
+    question: string;
+    yourAnswer: string;
+    correctAnswer: string;
+    correct: boolean;
+    explanation: string;
+  }[];
+  module: { id: string; status: string; bestQuizScore: number | null; attemptCount: number };
+  progress: LearningPlan["progress"];
+};
+
+export async function getProjectLearningPlanRequest(id: string): Promise<LearningPlan> {
   return authFetch(`${API_URL}/projects/${id}/learning/plan`);
+}
+
+export async function generateLearningPlanRequest(
+  projectId: string,
+  body: Record<string, unknown> = {}
+): Promise<LearningPlan> {
+  return authFetch(`${API_URL}/projects/${projectId}/learning/plan/generate`, {
+    method: "POST",
+    body: JSON.stringify(body),
+  });
+}
+
+export async function updateModuleStatusRequest(
+  projectId: string,
+  moduleId: string,
+  status: LearningModule["status"]
+) {
+  return authFetch(`${API_URL}/projects/${projectId}/learning/modules/${moduleId}`, {
+    method: "PATCH",
+    body: JSON.stringify({ status }),
+  });
+}
+
+export async function getLearningProgressRequest(projectId: string) {
+  return authFetch(`${API_URL}/projects/${projectId}/learning/progress`);
+}
+
+export async function getModuleQuizRequest(
+  projectId: string,
+  moduleId: string
+): Promise<{ questions: QuizQuestion[]; attemptCount: number; bestScore: number | null }> {
+  return authFetch(`${API_URL}/projects/${projectId}/learning/quiz/${moduleId}`);
+}
+
+export async function submitModuleQuizRequest(
+  projectId: string,
+  moduleId: string,
+  answers: number[]
+): Promise<QuizResult> {
+  return authFetch(`${API_URL}/projects/${projectId}/learning/quiz/${moduleId}/submit`, {
+    method: "POST",
+    body: JSON.stringify({ answers }),
+  });
+}
+
+export async function completeLabRequest(
+  projectId: string,
+  moduleId: string,
+  completed: boolean
+) {
+  return authFetch(`${API_URL}/projects/${projectId}/learning/lab/${moduleId}/complete`, {
+    method: "PATCH",
+    body: JSON.stringify({ completed }),
+  });
 }

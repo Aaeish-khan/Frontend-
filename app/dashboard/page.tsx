@@ -5,21 +5,27 @@ import Link from "next/link";
 import { AppShell } from "@/components/layout/app-shell";
 import { useAuth } from "@/components/auth/auth-provider";
 import { getProjectsRequest, type Project } from "@/lib/api-projects";
+import { getGamificationSummary, type GamificationSummary } from "@/lib/api-gamification";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { FolderKanban, Trophy, Users, FileBarChart, Plus } from "lucide-react";
+import { FolderKanban, Trophy, Users, FileBarChart, Plus, Flame, CheckCircle2, Circle } from "lucide-react";
 
 export default function DashboardPage() {
   const { user } = useAuth();
   const [projects, setProjects] = useState<Project[]>([]);
+  const [gamification, setGamification] = useState<GamificationSummary | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
   useEffect(() => {
-    const loadProjects = async () => {
+    const loadDashboard = async () => {
       try {
-        const data = await getProjectsRequest();
+        const [data, gam] = await Promise.all([
+          getProjectsRequest(),
+          getGamificationSummary().catch(() => null),
+        ]);
         setProjects(data);
+        setGamification(gam);
       } catch (err) {
         setError(err instanceof Error ? err.message : "Failed to load dashboard");
       } finally {
@@ -27,7 +33,7 @@ export default function DashboardPage() {
       }
     };
 
-    loadProjects();
+    loadDashboard();
   }, []);
 
   const displayName = user?.name?.split(" ")[0] ?? "User";
@@ -106,15 +112,61 @@ export default function DashboardPage() {
                     <p className="text-2xl font-bold">{projects.length}</p>
                   </div>
 
-                  <div className="rounded-xl border p-4">
-                    <div className="mb-2 flex items-center gap-2">
-                      <Trophy className="h-4 w-4" />
-                      <span className="font-medium">Gamification</span>
+                  <Link href="/gamification" className="block">
+                    <div className="rounded-xl border p-4 hover:border-primary/40 hover:bg-primary/5 transition-colors cursor-pointer">
+                      <div className="mb-2 flex items-center gap-2">
+                        <Trophy className="h-4 w-4 text-primary" />
+                        <span className="font-medium">Gamification</span>
+                        {gamification && (
+                          <span className="ml-auto text-xs font-semibold text-primary">Lv {gamification.level}</span>
+                        )}
+                      </div>
+                      {gamification ? (
+                        <div className="space-y-2">
+                          <div className="flex items-center justify-between text-sm">
+                            <span className="text-muted-foreground">{gamification.levelName}</span>
+                            <span className="font-semibold">{gamification.xp.toLocaleString()} XP</span>
+                          </div>
+                          <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted">
+                            <div
+                              className="h-full rounded-full bg-primary transition-all"
+                              style={{
+                                width: gamification.xpToNextLevel
+                                  ? `${Math.min(100, 100 - (gamification.xpToNextLevel / (gamification.xp + gamification.xpToNextLevel)) * 100)}%`
+                                  : "100%",
+                              }}
+                            />
+                          </div>
+                          <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                            <span className="flex items-center gap-1">
+                              <Flame className="h-3 w-3 text-orange-500" />
+                              {gamification.learningStreak}d streak
+                            </span>
+                            <span>{gamification.badgeCount} badges</span>
+                            {gamification.todayXP > 0 && (
+                              <span className="text-primary font-medium">+{gamification.todayXP} today</span>
+                            )}
+                          </div>
+                          {gamification.dailyMissions.length > 0 && (
+                            <div className="pt-1 space-y-1">
+                              {gamification.dailyMissions.slice(0, 2).map((m) => (
+                                <div key={m.id} className="flex items-center gap-1.5 text-xs">
+                                  {m.completed
+                                    ? <CheckCircle2 className="h-3 w-3 shrink-0 text-green-500" />
+                                    : <Circle className="h-3 w-3 shrink-0 text-muted-foreground" />}
+                                  <span className={m.completed ? "line-through text-muted-foreground" : ""}>
+                                    {m.title}
+                                  </span>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      ) : (
+                        <p className="text-sm text-muted-foreground">Track XP, badges, and streaks.</p>
+                      )}
                     </div>
-                    <p className="text-sm text-muted-foreground">
-                      Global XP and badges will aggregate across all projects.
-                    </p>
-                  </div>
+                  </Link>
 
                   <div className="rounded-xl border p-4">
                     <div className="mb-2 flex items-center gap-2">
