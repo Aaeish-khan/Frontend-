@@ -7,12 +7,14 @@ import {
   getProjectInterviewHistoryRequest,
   startProjectInterviewRequest,
   answerProjectInterviewRequest,
+  transcribeInterviewAnswerRequest,
 } from "@/lib/api-projects";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
   Camera, Mic, MicOff, Video, VideoOff, StopCircle, ChevronRight,
   Clock, CheckCircle, AlertCircle, Trophy, Check, Play, Loader2,
+  Square, Sparkles, Download,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
@@ -21,18 +23,43 @@ import { ProgressRing } from "@/components/dashboard/progress-ring";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
+type Dimensions = {
+  relevance:     number;
+  structure:     number;
+  depth:         number;
+  communication: number;
+};
+
 type Question = {
-  question: string;
+  question:    string;
+  type?:       string;
+  targetSkill?: string;
+  isFollowup?:  boolean;
   userAnswer?: string;
   aiFeedback?: string;
-  score?: number;
+  strength?:   string;
+  improvement?: string;
+  score?:      number;
+  dimensions?: Dimensions;
 };
+
+type Report = {
+  strengths:          string[];
+  improvements:       string[];
+  suggestedResources: string[];
+  recommendation:     string;
+};
+
+type Persona = "friendly" | "strict" | "technical" | "behavioral" | "mixed";
 
 type InterviewSession = {
   _id: string;
   title: string;
+  role?: string;
+  persona?: Persona;
   questions: Question[];
   overallScore?: number;
+  report?: Report;
   completedAt?: string | null;
 };
 
@@ -53,6 +80,147 @@ function scoreColor(s: number) {
   if (s >= 6) return "text-primary";
   if (s >= 4) return "text-yellow-500";
   return "text-red-500";
+}
+
+// ── Results sub-components (defined before main export for TS resolution) ─────
+
+const DIMENSION_LABELS: Record<string, string> = {
+  relevance:     "Relevance",
+  structure:     "Structure",
+  depth:         "Depth",
+  communication: "Communication",
+};
+
+function DimensionBar({ label, value }: { label: string; value: number }) {
+  const pct  = (value / 10) * 100;
+  const color = value >= 8 ? "bg-green-500" : value >= 6 ? "bg-primary" : value >= 4 ? "bg-yellow-500" : "bg-red-500";
+  return (
+    <div className="space-y-1">
+      <div className="flex items-center justify-between text-xs">
+        <span className="text-muted-foreground">{label}</span>
+        <span className={cn("font-semibold", scoreColor(value))}>{value}/10</span>
+      </div>
+      <div className="h-1.5 w-full rounded-full bg-muted overflow-hidden">
+        <motion.div
+          className={cn("h-full rounded-full", color)}
+          initial={{ width: 0 }}
+          animate={{ width: `${pct}%` }}
+          transition={{ duration: 0.6, ease: "easeOut" }}
+        />
+      </div>
+    </div>
+  );
+}
+
+function AggregateDimensions({ questions }: { questions: Question[] }) {
+  const qs = questions.filter(q => q.dimensions);
+  if (qs.length === 0) return null;
+
+  const avg = (key: keyof Dimensions) =>
+    Math.round(qs.reduce((s, q) => s + (q.dimensions?.[key] ?? 0), 0) / qs.length);
+
+  return (
+    <Card>
+      <CardHeader className="pb-2"><CardTitle className="text-sm">Performance Breakdown</CardTitle></CardHeader>
+      <CardContent className="grid gap-3 sm:grid-cols-2">
+        {(Object.keys(DIMENSION_LABELS) as (keyof Dimensions)[]).map((k) => (
+          <DimensionBar key={k} label={DIMENSION_LABELS[k]} value={avg(k)} />
+        ))}
+      </CardContent>
+    </Card>
+  );
+}
+
+const Q_TYPE_COLORS: Record<string, string> = {
+  behavioral:   "bg-blue-500/10 text-blue-500",
+  technical:    "bg-purple-500/10 text-purple-500",
+  situational:  "bg-orange-500/10 text-orange-500",
+  motivational: "bg-green-500/10 text-green-500",
+};
+
+function QuestionFeedbackCard({ q, index }: { q: Question; index: number }) {
+  const [open, setOpen] = useState(false);
+  const typeCls = Q_TYPE_COLORS[q.type || ""] || "bg-muted text-muted-foreground";
+
+  return (
+    <div className="rounded-xl border border-border overflow-hidden">
+      <button
+        onClick={() => setOpen(v => !v)}
+        className="w-full flex items-start justify-between gap-3 p-4 text-left hover:bg-muted/30 transition"
+      >
+        <div className="flex-1 space-y-1">
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="text-xs font-medium text-muted-foreground">Q{index + 1}</span>
+            {q.isFollowup && (
+              <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-yellow-500/15 text-yellow-500 font-medium">
+                Follow-up
+              </span>
+            )}
+            {q.type && (
+              <span className={cn("text-[10px] px-1.5 py-0.5 rounded-full font-medium capitalize", typeCls)}>
+                {q.type}
+              </span>
+            )}
+            {q.targetSkill && (
+              <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-muted text-muted-foreground">
+                {q.targetSkill}
+              </span>
+            )}
+          </div>
+          <p className="text-sm font-medium">{q.question}</p>
+        </div>
+        <div className="flex items-center gap-2 shrink-0">
+          {q.score != null && (
+            <span className={cn("font-bold text-sm", scoreColor(q.score))}>{q.score}/10</span>
+          )}
+          <ChevronRight className={cn("h-4 w-4 text-muted-foreground transition-transform", open && "rotate-90")} />
+        </div>
+      </button>
+
+      <AnimatePresence>
+        {open && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className="overflow-hidden"
+          >
+            <div className="border-t border-border p-4 space-y-4">
+              {q.dimensions && (
+                <div className="grid gap-2 sm:grid-cols-2">
+                  {(Object.keys(DIMENSION_LABELS) as (keyof Dimensions)[]).map((k) => (
+                    <DimensionBar key={k} label={DIMENSION_LABELS[k]} value={q.dimensions![k]} />
+                  ))}
+                </div>
+              )}
+              {q.userAnswer && (
+                <div>
+                  <p className="text-xs font-medium text-muted-foreground mb-1">Your answer</p>
+                  <p className="text-xs text-muted-foreground bg-muted/40 rounded-lg px-3 py-2 leading-relaxed">{q.userAnswer}</p>
+                </div>
+              )}
+              {q.strength && (
+                <div className="flex gap-2 text-xs text-green-500 bg-green-500/5 rounded-lg px-3 py-2">
+                  <Check className="h-3.5 w-3.5 shrink-0 mt-0.5" />
+                  <span>{q.strength}</span>
+                </div>
+              )}
+              {q.improvement && (
+                <div className="flex gap-2 text-xs text-yellow-500 bg-yellow-500/5 rounded-lg px-3 py-2">
+                  <AlertCircle className="h-3.5 w-3.5 shrink-0 mt-0.5" />
+                  <span>{q.improvement}</span>
+                </div>
+              )}
+              {q.aiFeedback && (
+                <p className="text-xs text-muted-foreground leading-relaxed">{q.aiFeedback}</p>
+              )}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
 }
 
 // ── Main page ─────────────────────────────────────────────────────────────────
@@ -77,9 +245,23 @@ export default function ProjectInterviewPage() {
   const [totalTime,       setTotalTime]       = useState(0);
   const [countdown,       setCountdown]       = useState(3);
   const [showEndConfirm,  setShowEndConfirm]  = useState(false);
+  // Phase 2 — recording
+  const [isRecording,     setIsRecording]     = useState(false);
+  const [isTranscribing,  setIsTranscribing]  = useState(false);
+  const [recordingTime,   setRecordingTime]   = useState(0);
+  // Phase 3 — adaptive follow-up
+  const [showFollowupAlert, setShowFollowupAlert] = useState(false);
 
-  const videoRef  = useRef<HTMLVideoElement>(null);
-  const streamRef = useRef<MediaStream | null>(null);
+  // Phase 4 — persona + session recording
+  const [selectedPersona, setSelectedPersona] = useState<Persona>("mixed");
+  const [sessionRecordingUrl, setSessionRecordingUrl] = useState<string | null>(null);
+  const sessionRecorderRef = useRef<MediaRecorder | null>(null);
+  const sessionChunksRef   = useRef<Blob[]>([]);
+
+  const videoRef        = useRef<HTMLVideoElement>(null);
+  const streamRef       = useRef<MediaStream | null>(null);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const audioChunksRef  = useRef<Blob[]>([]);
   const audioLevel = useAudioLevel(stream);
 
   const currentQ = currentSession?.questions[currentIndex];
@@ -108,11 +290,23 @@ export default function ProjectInterviewPage() {
     return () => { streamRef.current?.getTracks().forEach(t => t.stop()); };
   }, []);
 
-  // ── Start camera when entering session ──
+  // ── Start camera + session recorder when entering session ──
   useEffect(() => {
     if (stage !== "session") return;
     navigator.mediaDevices.getUserMedia({ video: true, audio: true })
-      .then(s => { streamRef.current = s; setStream(s); if (videoRef.current) videoRef.current.srcObject = s; })
+      .then(s => {
+        streamRef.current = s;
+        setStream(s);
+        if (videoRef.current) videoRef.current.srcObject = s;
+        // Start session-level recording (video + audio)
+        if (typeof MediaRecorder !== "undefined" && MediaRecorder.isTypeSupported("video/webm")) {
+          sessionChunksRef.current = [];
+          const sr = new MediaRecorder(s, { mimeType: "video/webm" });
+          sr.ondataavailable = (e) => { if (e.data.size > 0) sessionChunksRef.current.push(e.data); };
+          sr.start(1000);
+          sessionRecorderRef.current = sr;
+        }
+      })
       .catch(() => {});
   }, [stage]);
 
@@ -143,12 +337,19 @@ export default function ProjectInterviewPage() {
     return () => clearInterval(id);
   }, [currentIndex, stage]);
 
+  // ── Recording timer ──
+  useEffect(() => {
+    if (!isRecording) return;
+    const id = setInterval(() => setRecordingTime(t => t + 1), 1000);
+    return () => clearInterval(id);
+  }, [isRecording]);
+
   // ── Start interview ──
   async function handleStart() {
     try {
       setStarting(true);
       setError("");
-      const session = await startProjectInterviewRequest(projectId);
+      const session = await startProjectInterviewRequest(projectId, { persona: selectedPersona });
       setCurrentSession(session);
       setCurrentIndex(0);
       setAnswer("");
@@ -161,30 +362,41 @@ export default function ProjectInterviewPage() {
     }
   }
 
-  // ── Submit answer ──
+  // ── Submit answer (Phase 3: server determines completion) ──
   async function handleSubmitAnswer() {
     if (!currentSession || !answer.trim()) return;
-    const isLast = currentIndex === currentSession.questions.length - 1;
     try {
       setSubmitting(true);
       setInterviewerState("thinking");
       const updated = await answerProjectInterviewRequest(projectId, currentSession._id, {
         index: currentIndex,
         answer,
-        isLast,
       });
+      const followupWasAdded = (updated as { followupAdded?: boolean }).followupAdded ?? false;
       setCurrentSession(updated);
       setAnswer("");
+      if (followupWasAdded) {
+        setShowFollowupAlert(true);
+        setTimeout(() => setShowFollowupAlert(false), 3500);
+      }
       setTimeout(() => {
-        if (!isLast) {
-          setCurrentIndex(i => i + 1);
-          setInterviewerState("asking");
-        } else {
+        if (updated.completedAt) {
+          // stop session recorder
+          if (sessionRecorderRef.current && sessionRecorderRef.current.state !== "inactive") {
+            sessionRecorderRef.current.stop();
+            sessionRecorderRef.current.onstop = () => {
+              const blob = new Blob(sessionChunksRef.current, { type: "video/webm" });
+              setSessionRecordingUrl(URL.createObjectURL(blob));
+            };
+          }
           streamRef.current?.getTracks().forEach(t => t.stop());
           setStage("done");
           loadHistory();
+        } else {
+          setCurrentIndex(i => i + 1);
+          setInterviewerState("asking");
         }
-      }, 1500);
+      }, followupWasAdded ? 2000 : 1500);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to submit answer");
       setInterviewerState("listening");
@@ -193,11 +405,65 @@ export default function ProjectInterviewPage() {
     }
   }
 
+  // ── Phase 2: voice recording ──
+  function startRecording() {
+    const audioTrack = streamRef.current?.getAudioTracks()[0];
+    if (!audioTrack) return;
+    const audioStream = new MediaStream([audioTrack]);
+    const mimeType = MediaRecorder.isTypeSupported("audio/webm;codecs=opus")
+      ? "audio/webm;codecs=opus"
+      : MediaRecorder.isTypeSupported("audio/webm")
+      ? "audio/webm"
+      : "audio/ogg";
+    const mr = new MediaRecorder(audioStream, { mimeType });
+    audioChunksRef.current = [];
+    mr.ondataavailable = (e) => { if (e.data.size > 0) audioChunksRef.current.push(e.data); };
+    mr.start(250);
+    mediaRecorderRef.current = mr;
+    setIsRecording(true);
+    setRecordingTime(0);
+  }
+
+  async function stopRecordingAndTranscribe() {
+    if (!mediaRecorderRef.current || !currentSession) return;
+    setIsRecording(false);
+    setIsTranscribing(true);
+    mediaRecorderRef.current.stop();
+    await new Promise<void>((resolve) => {
+      if (mediaRecorderRef.current) mediaRecorderRef.current.onstop = () => resolve();
+      else resolve();
+    });
+    try {
+      const blob = new Blob(audioChunksRef.current, { type: "audio/webm" });
+      const { transcript } = await transcribeInterviewAnswerRequest(
+        projectId, currentSession._id, blob
+      );
+      if (transcript) setAnswer(transcript);
+    } catch {
+      // silently fail — user can type manually
+    } finally {
+      setIsTranscribing(false);
+    }
+  }
+
   // ── End early ──
   function handleEndEarly() {
+    if (sessionRecorderRef.current && sessionRecorderRef.current.state !== "inactive") {
+      sessionRecorderRef.current.stop();
+      sessionRecorderRef.current.onstop = () => {
+        const blob = new Blob(sessionChunksRef.current, { type: "video/webm" });
+        setSessionRecordingUrl(URL.createObjectURL(blob));
+      };
+    }
     streamRef.current?.getTracks().forEach(t => t.stop());
     setStage("done");
     loadHistory();
+  }
+
+  function handleExportPDF() {
+    if (!currentSession) return;
+    const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000/api";
+    window.open(`${API_URL}/projects/${projectId}/interview/${currentSession._id}/report`, "_blank");
   }
 
   const toggleMute = () => {
@@ -240,9 +506,23 @@ export default function ProjectInterviewPage() {
 
   // ── Stage: session ────────────────────────────────────────────────────────
   if (stage === "session" && currentSession && currentQ) {
+    const isLastQ = currentIndex === currentSession.questions.length - 1;
     return (
       <AppShell title="Mock Interview" description="Interview in progress — stay focused">
         {error && <p className="mb-4 text-sm text-red-400">{error}</p>}
+
+        {/* Phase 3: follow-up alert */}
+        <AnimatePresence>
+          {showFollowupAlert && (
+            <motion.div
+              initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}
+              className="mb-4 flex items-center gap-2 rounded-lg border border-primary/30 bg-primary/10 px-4 py-2.5 text-sm text-primary"
+            >
+              <Sparkles className="h-4 w-4 shrink-0" />
+              Follow-up question added based on your answer — keep going!
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         <div className="grid gap-6 lg:grid-cols-5">
           {/* ── LEFT: Interviewer + question ── */}
@@ -264,7 +544,7 @@ export default function ProjectInterviewPage() {
                 </div>
                 <div className="flex-1">
                   <p className="font-semibold text-sm">AI Interviewer</p>
-                  <p className="text-xs text-muted-foreground">Powered by InterMate</p>
+                  <p className="text-xs text-muted-foreground capitalize">{currentSession.persona || "mixed"} style</p>
                 </div>
                 <InterviewerStateLabel state={interviewerState} />
               </div>
@@ -277,11 +557,23 @@ export default function ProjectInterviewPage() {
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -10 }}
                   transition={{ duration: 0.25 }}
-                  className="rounded-xl border border-primary/20 bg-primary/5 p-5"
+                  className={cn(
+                    "rounded-xl border p-5",
+                    currentQ.isFollowup
+                      ? "border-yellow-500/30 bg-yellow-500/5"
+                      : "border-primary/20 bg-primary/5"
+                  )}
                 >
-                  <p className="text-xs text-muted-foreground uppercase tracking-wide font-medium mb-3">
-                    Question {currentIndex + 1} of {currentSession.questions.length}
-                  </p>
+                  <div className="flex items-center gap-2 mb-3">
+                    <p className="text-xs text-muted-foreground uppercase tracking-wide font-medium">
+                      Question {currentIndex + 1} of {currentSession.questions.length}
+                    </p>
+                    {currentQ.isFollowup && (
+                      <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-yellow-500/20 text-yellow-500 font-medium">
+                        Follow-up
+                      </span>
+                    )}
+                  </div>
                   {interviewerState === "asking" ? (
                     <TypewriterText text={currentQ.question} />
                   ) : (
@@ -307,31 +599,59 @@ export default function ProjectInterviewPage() {
               </AnimatePresence>
             </div>
 
-            {/* Answer textarea */}
+            {/* Answer panel */}
             <div className="rounded-xl border border-border bg-card p-4 space-y-3">
-              <p className="text-sm font-medium flex items-center gap-2">
-                <Mic className="h-4 w-4 text-primary" />
-                Your Answer
-              </p>
+              <div className="flex items-center justify-between">
+                <p className="text-sm font-medium flex items-center gap-2">
+                  <Mic className="h-4 w-4 text-primary" />
+                  Your Answer
+                </p>
+                {/* Phase 2: voice record button */}
+                {!isTranscribing && interviewerState === "listening" && !submitting && (
+                  <Button
+                    size="sm"
+                    variant={isRecording ? "destructive" : "outline"}
+                    className="h-7 gap-1.5 text-xs"
+                    onClick={isRecording ? stopRecordingAndTranscribe : startRecording}
+                  >
+                    {isRecording ? (
+                      <><Square className="h-3 w-3" />Stop ({recordingTime}s)</>
+                    ) : (
+                      <><Mic className="h-3 w-3" />Voice</>
+                    )}
+                  </Button>
+                )}
+                {isTranscribing && (
+                  <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                    <Loader2 className="h-3 w-3 animate-spin" />Transcribing…
+                  </span>
+                )}
+                {isRecording && (
+                  <span className="flex items-center gap-1.5 text-xs text-red-400">
+                    <span className="h-1.5 w-1.5 rounded-full bg-red-500 animate-pulse" />
+                    Recording…
+                  </span>
+                )}
+              </div>
               <textarea
                 rows={5}
                 value={answer}
                 onChange={e => setAnswer(e.target.value)}
-                placeholder="Type your answer here…"
-                disabled={submitting || interviewerState === "asking" || interviewerState === "thinking"}
+                placeholder={isRecording ? "Recording… speak your answer" : "Type or record your answer…"}
+                disabled={submitting || interviewerState === "asking" || interviewerState === "thinking" || isRecording || isTranscribing}
                 className="w-full rounded-xl border border-border bg-background px-4 py-3 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-primary/30 transition disabled:opacity-50 disabled:cursor-not-allowed"
               />
               <div className="flex items-center justify-between">
                 <span className="text-xs text-muted-foreground">{answer.length} characters</span>
                 <Button
                   onClick={handleSubmitAnswer}
-                  disabled={submitting || !answer.trim() || interviewerState !== "listening"}
+                  disabled={submitting || !answer.trim() || interviewerState !== "listening" || isRecording || isTranscribing}
                   className="gap-2"
                 >
                   {submitting ? (
-                    <><Loader2 className="h-4 w-4 animate-spin" />Submitting…</>
+                    <><Loader2 className="h-4 w-4 animate-spin" />Evaluating…</>
                   ) : (
-                    <><ChevronRight className="h-4 w-4" />{currentIndex === currentSession.questions.length - 1 ? "Finish Interview" : "Next Question"}</>
+                    <><ChevronRight className="h-4 w-4" />{isLastQ ? "Finish Interview" : "Next Question"}</>
                   )}
                 </Button>
               </div>
@@ -440,56 +760,106 @@ export default function ProjectInterviewPage() {
 
   // ── Stage: done ───────────────────────────────────────────────────────────
   if (stage === "done" && currentSession) {
-    const scored = currentSession.questions.filter(q => q.score != null);
-    const avg    = scored.length ? Math.round(scored.reduce((a, q) => a + (q.score ?? 0), 0) / scored.length * 10) : 0;
+    const overall = currentSession.overallScore ?? 0;
+    const pct     = overall * 10;
+    const report  = currentSession.report;
 
     return (
       <AppShell title="Mock Interview" description="Interview complete">
         <motion.div className="space-y-6 max-w-2xl mx-auto" initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}>
+
+          {/* ── Hero score card ── */}
           <Card className="overflow-hidden">
             <div className="bg-gradient-to-r from-primary/10 via-primary/5 to-transparent p-6">
               <div className="flex items-center gap-6">
-                <ProgressRing progress={avg} size={100} strokeWidth={9}>
+                <ProgressRing progress={pct} size={100} strokeWidth={9}>
                   <div className="text-center">
-                    <span className={cn("text-2xl font-bold", scoreColor(currentSession.overallScore ?? 0))}>
-                      {currentSession.overallScore ?? 0}
-                    </span>
+                    <span className={cn("text-2xl font-bold", scoreColor(overall))}>{overall}</span>
                     <p className="text-xs text-muted-foreground">/10</p>
                   </div>
                 </ProgressRing>
-                <div>
+                <div className="flex-1">
                   <h2 className="text-xl font-bold">Interview Complete</h2>
                   <p className="text-muted-foreground text-sm mt-0.5">{currentSession.title}</p>
                   <p className="text-sm mt-2 flex items-center gap-1.5 text-primary font-medium">
-                    <Trophy className="h-4 w-4" />
-                    Overall score: {currentSession.overallScore ?? 0} / 10
+                    <Trophy className="h-4 w-4" />Overall score: {overall} / 10
                   </p>
+                  {report?.recommendation && (
+                    <p className="text-xs text-muted-foreground mt-2 leading-relaxed">{report.recommendation}</p>
+                  )}
                 </div>
               </div>
             </div>
           </Card>
 
-          {/* Per-question feedback */}
+          {/* ── Aggregate dimension bars ── */}
+          <AggregateDimensions questions={currentSession.questions} />
+
+          {/* ── Report: strengths + improvements ── */}
+          {report && (report.strengths.length > 0 || report.improvements.length > 0) && (
+            <div className="grid gap-4 sm:grid-cols-2">
+              {report.strengths.length > 0 && (
+                <Card>
+                  <CardHeader className="pb-2"><CardTitle className="text-sm text-green-500">What You Did Well</CardTitle></CardHeader>
+                  <CardContent className="space-y-1.5">
+                    {report.strengths.map((s, i) => (
+                      <p key={i} className="text-xs text-muted-foreground flex gap-2">
+                        <Check className="h-3.5 w-3.5 shrink-0 text-green-500 mt-0.5" />{s}
+                      </p>
+                    ))}
+                  </CardContent>
+                </Card>
+              )}
+              {report.improvements.length > 0 && (
+                <Card>
+                  <CardHeader className="pb-2"><CardTitle className="text-sm text-yellow-500">Areas to Improve</CardTitle></CardHeader>
+                  <CardContent className="space-y-1.5">
+                    {report.improvements.map((s, i) => (
+                      <p key={i} className="text-xs text-muted-foreground flex gap-2">
+                        <AlertCircle className="h-3.5 w-3.5 shrink-0 text-yellow-500 mt-0.5" />{s}
+                      </p>
+                    ))}
+                  </CardContent>
+                </Card>
+              )}
+            </div>
+          )}
+
+          {/* ── Per-question feedback ── */}
           <Card>
             <CardHeader><CardTitle>Question Feedback</CardTitle></CardHeader>
-            <CardContent className="space-y-3">
+            <CardContent className="space-y-4">
               {currentSession.questions.map((q, i) => (
-                <div key={i} className="rounded-xl border border-border p-4 space-y-2">
-                  <div className="flex items-start justify-between gap-3">
-                    <p className="text-sm font-medium">{q.question}</p>
-                    {q.score != null && (
-                      <span className={cn("shrink-0 font-bold text-sm", scoreColor(q.score))}>{q.score}/10</span>
-                    )}
-                  </div>
-                  {q.aiFeedback && (
-                    <p className="text-xs text-muted-foreground border-t border-border pt-2">{q.aiFeedback}</p>
-                  )}
-                </div>
+                <QuestionFeedbackCard key={i} q={q} index={i} />
               ))}
             </CardContent>
           </Card>
 
-          <div className="flex gap-3 justify-end">
+          {/* ── Suggested resources ── */}
+          {report?.suggestedResources && report.suggestedResources.length > 0 && (
+            <Card>
+              <CardHeader className="pb-2"><CardTitle className="text-sm">Next Steps</CardTitle></CardHeader>
+              <CardContent className="space-y-1.5">
+                {report.suggestedResources.map((r, i) => (
+                  <p key={i} className="text-xs text-muted-foreground flex gap-2">
+                    <ChevronRight className="h-3.5 w-3.5 shrink-0 text-primary mt-0.5" />{r}
+                  </p>
+                ))}
+              </CardContent>
+            </Card>
+          )}
+
+          <div className="flex flex-wrap gap-3 justify-end">
+            {sessionRecordingUrl && (
+              <a href={sessionRecordingUrl} download="interview-recording.webm">
+                <Button variant="outline" className="gap-2">
+                  <Download className="h-4 w-4" />Download Recording
+                </Button>
+              </a>
+            )}
+            <Button variant="outline" className="gap-2" onClick={handleExportPDF}>
+              <Download className="h-4 w-4" />Export PDF
+            </Button>
             <Button variant="outline" onClick={() => { setStage("history"); setCurrentSession(null); }}>
               Back to History
             </Button>
@@ -507,6 +877,34 @@ export default function ProjectInterviewPage() {
     <AppShell title="Mock Interview" description="AI-powered interview practice for this project">
       <div className="space-y-6 max-w-2xl mx-auto">
         {error && <p className="text-sm text-red-400">{error}</p>}
+
+        {/* Persona picker */}
+        <div className="space-y-3">
+          <p className="text-sm font-medium">Choose Interviewer Style</p>
+          <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
+            {(["mixed", "friendly", "strict", "technical", "behavioral"] as Persona[]).map((p) => (
+              <button
+                key={p}
+                onClick={() => setSelectedPersona(p)}
+                className={cn(
+                  "rounded-xl border px-3 py-2.5 text-left transition-all",
+                  selectedPersona === p
+                    ? "border-primary bg-primary/10 text-primary"
+                    : "border-border bg-card hover:border-primary/40"
+                )}
+              >
+                <p className="text-xs font-semibold capitalize">{p}</p>
+                <p className="text-[10px] text-muted-foreground mt-0.5">
+                  {p === "mixed" && "Balanced"}
+                  {p === "friendly" && "Warm & supportive"}
+                  {p === "strict" && "Demanding"}
+                  {p === "technical" && "Deep tech"}
+                  {p === "behavioral" && "STAR-focused"}
+                </p>
+              </button>
+            ))}
+          </div>
+        </div>
 
         {/* Start card */}
         <Card className="overflow-hidden">
@@ -666,3 +1064,4 @@ function SessionAudioBars({ level }: { level: number }) {
     </div>
   );
 }
+

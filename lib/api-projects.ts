@@ -237,9 +237,10 @@ export async function getProjectInterviewHistoryRequest(id: string) {
   return authFetch(`${API_URL}/projects/${id}/interview/history`);
 }
 
-export async function startProjectInterviewRequest(id: string) {
+export async function startProjectInterviewRequest(id: string, opts: { persona?: string } = {}) {
   return authFetch(`${API_URL}/projects/${id}/interview/start`, {
     method: "POST",
+    body: JSON.stringify({ persona: opts.persona || "mixed" }),
   });
 }
 
@@ -249,13 +250,31 @@ export async function answerProjectInterviewRequest(
   data: {
     index: number;
     answer: string;
-    isLast?: boolean;
   }
 ) {
   return authFetch(`${API_URL}/projects/${projectId}/interview/${sessionId}/answer`, {
     method: "PATCH",
     body: JSON.stringify(data),
   });
+}
+
+export async function transcribeInterviewAnswerRequest(
+  projectId: string,
+  sessionId: string,
+  audioBlob: Blob,
+): Promise<{ transcript: string }> {
+  const token = getToken();
+  const form = new FormData();
+  form.append("audio", audioBlob, "answer.webm");
+
+  const res = await fetch(`${API_URL}/projects/${projectId}/interview/${sessionId}/transcribe`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${token}` },
+    body: form,
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.message || "Transcription failed");
+  return data;
 }
 
 // ─── Resume ────────────────────────────────────────────────────────────────────
