@@ -25,6 +25,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { useAuth } from "@/components/auth/auth-provider"
 import { getProjectsRequest, type Project } from "@/lib/api-projects"
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet"
+import { ThemeToggle } from "@/components/theme-toggle"
 
 const globalNavigation = [
   { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
@@ -85,7 +86,7 @@ export function Sidebar({ mobileOpen = false, onMobileOpenChange }: SidebarProps
     <>
       <div
         className={cn(
-          "flex h-16 items-center border-b border-sidebar-border px-4",
+          "flex h-16 items-center border-b border-white/8 px-4",
           collapsed && !isMobile ? "justify-center" : "justify-between",
         )}
       >
@@ -94,7 +95,7 @@ export function Sidebar({ mobileOpen = false, onMobileOpenChange }: SidebarProps
           className="flex items-center gap-2"
           onClick={() => isMobile && closeMobileNav()}
         >
-          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary">
+          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-gradient-to-br from-indigo-500 to-purple-600 shadow-lg shadow-indigo-500/30">
             <Sparkles className="h-5 w-5 text-primary-foreground" />
           </div>
           {(isMobile || !collapsed) && (
@@ -148,13 +149,15 @@ export function Sidebar({ mobileOpen = false, onMobileOpenChange }: SidebarProps
                 className={cn(
                   "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
                   isActive
-                    ? "bg-sidebar-primary text-sidebar-primary-foreground"
-                    : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
-                  collapsed && !isMobile && "justify-center px-2",
+                    ? "bg-gradient-to-r from-indigo-500/20 to-purple-500/10 text-primary border-l-2 border-primary shadow-sm shadow-primary/10"
+                    : "text-sidebar-foreground/80 hover:bg-white/6 hover:text-foreground",
+                  collapsed && !isMobile && "justify-center px-2 border-l-0",
                 )}
                 title={!isMobile && collapsed ? item.name : undefined}
               >
-                <item.icon className="h-5 w-5 shrink-0" />
+                <span className={cn("icon-box rounded-md p-0.5", isActive && "text-primary")}>
+                  <item.icon className="h-5 w-5 shrink-0" />
+                </span>
                 {(isMobile || !collapsed) && <span>{item.name}</span>}
               </Link>
             )
@@ -189,7 +192,7 @@ export function Sidebar({ mobileOpen = false, onMobileOpenChange }: SidebarProps
         ) : null}
       </nav>
 
-      <div className="border-t border-sidebar-border p-3">
+        <div className="border-t border-white/8 p-3">
         {bottomNav.map((item) => {
           const isActive = pathname === item.href
           return (
@@ -198,15 +201,15 @@ export function Sidebar({ mobileOpen = false, onMobileOpenChange }: SidebarProps
               href={item.href}
               onClick={() => isMobile && closeMobileNav()}
               className={cn(
-                "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
+                "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-200",
                 isActive
-                  ? "bg-sidebar-primary text-sidebar-primary-foreground"
-                  : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
-                collapsed && !isMobile && "justify-center px-2",
+                  ? "bg-gradient-to-r from-indigo-500/20 to-purple-500/10 text-primary border-l-2 border-primary shadow-sm shadow-primary/10"
+                  : "text-sidebar-foreground/80 hover:bg-white/6 hover:text-foreground",
+                collapsed && !isMobile && "justify-center px-2 border-l-0",
               )}
               title={!isMobile && collapsed ? item.name : undefined}
             >
-              <item.icon className="h-5 w-5 shrink-0" />
+              <item.icon className={cn("h-5 w-5 shrink-0", isActive && "text-primary")} />
               {(isMobile || !collapsed) && <span>{item.name}</span>}
             </Link>
           )
@@ -214,11 +217,11 @@ export function Sidebar({ mobileOpen = false, onMobileOpenChange }: SidebarProps
 
         <div
           className={cn(
-            "mt-3 flex items-center gap-3 rounded-lg bg-sidebar-accent/50 p-2",
+            "mt-3 flex items-center gap-3 rounded-lg bg-white/5 border border-white/8 p-2",
             collapsed && !isMobile && "justify-center",
           )}
         >
-          <Avatar className="h-9 w-9 border-2 border-primary/20">
+          <Avatar className="h-9 w-9 border-2 border-primary/30 ring-1 ring-primary/10">
             <AvatarImage src={"/placeholder-user.jpg"} alt={user?.name ?? "User"} />
             <AvatarFallback className="bg-primary/10 text-primary text-sm font-medium">
               {initials}
@@ -233,14 +236,20 @@ export function Sidebar({ mobileOpen = false, onMobileOpenChange }: SidebarProps
           )}
 
           {(isMobile || !collapsed) && (
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-8 w-8 shrink-0 text-sidebar-foreground/60 hover:text-sidebar-foreground"
-              onClick={handleLogout}
-            >
-              <LogOut className="h-4 w-4" />
-            </Button>
+            <div className="flex items-center gap-1 shrink-0">
+              <ThemeToggle />
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8 shrink-0 text-sidebar-foreground/60 hover:text-sidebar-foreground"
+                onClick={handleLogout}
+              >
+                <LogOut className="h-4 w-4" />
+              </Button>
+            </div>
+          )}
+          {collapsed && !isMobile && (
+            <ThemeToggle />
           )}
         </div>
       </div>
@@ -251,7 +260,7 @@ export function Sidebar({ mobileOpen = false, onMobileOpenChange }: SidebarProps
     <>
       <aside
         className={cn(
-          "fixed left-0 top-0 z-40 hidden h-screen flex-col border-r border-sidebar-border bg-sidebar transition-all duration-300 md:flex",
+          "fixed left-0 top-0 z-40 hidden h-screen flex-col border-r border-white/8 bg-sidebar/80 backdrop-blur-xl transition-all duration-300 md:flex",
           collapsed ? "w-[72px]" : "w-64",
         )}
       >
@@ -259,7 +268,7 @@ export function Sidebar({ mobileOpen = false, onMobileOpenChange }: SidebarProps
       </aside>
 
       <Sheet open={mobileOpen} onOpenChange={onMobileOpenChange}>
-        <SheetContent side="left" className="w-[88vw] max-w-[320px] border-r bg-sidebar p-0">
+        <SheetContent side="left" className="w-[88vw] max-w-[320px] border-r border-white/8 bg-sidebar/90 backdrop-blur-xl p-0">
           <SheetHeader className="sr-only">
             <SheetTitle>Navigation</SheetTitle>
             <SheetDescription>Browse sections and project tools.</SheetDescription>

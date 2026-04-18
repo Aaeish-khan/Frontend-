@@ -51,7 +51,7 @@ export function StatsCard({
               </div>
             )}
           </div>
-          <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10">
+          <div className="icon-box flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-primary/20 to-purple-500/10 border border-primary/15">
             <Icon className="h-6 w-6 text-primary" />
           </div>
         </div>

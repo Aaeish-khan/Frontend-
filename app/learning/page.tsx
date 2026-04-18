@@ -10,6 +10,8 @@ import { LearningDetail } from "@/components/learning/learning-detail"
 import { learningModules, learningRecommendations } from "@/lib/mock-data"
 import { Search, Filter, BookOpen, Target, TrendingUp, Clock } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { motion } from "framer-motion"
+import { staggerContainer, staggerItem, viewportOnce } from "@/lib/animations"
 
 type View = "list" | "detail"
 
@@ -70,13 +72,18 @@ export default function LearningPage() {
       title="Learning Mode"
       description="Diagnose, learn, and practice to improve your interview skills"
     >
-      <div className="space-y-6">
+      <motion.div
+        className="space-y-6"
+        initial="hidden"
+        animate="visible"
+        variants={staggerContainer}
+      >
         {/* Stats */}
-        <div className="grid gap-4 md:grid-cols-4">
+        <motion.div variants={staggerItem} className="grid gap-4 md:grid-cols-4">
           <Card>
             <CardContent className="p-4">
               <div className="flex items-center gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
+                <div className="icon-box flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
                   <TrendingUp className="h-5 w-5 text-primary" />
                 </div>
                 <div>
@@ -89,7 +96,7 @@ export default function LearningPage() {
           <Card>
             <CardContent className="p-4">
               <div className="flex items-center gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-green-500/10">
+                <div className="icon-box flex h-10 w-10 items-center justify-center rounded-lg bg-green-500/10">
                   <Target className="h-5 w-5 text-green-500" />
                 </div>
                 <div>
@@ -102,7 +109,7 @@ export default function LearningPage() {
           <Card>
             <CardContent className="p-4">
               <div className="flex items-center gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-500/10">
+                <div className="icon-box flex h-10 w-10 items-center justify-center rounded-lg bg-blue-500/10">
                   <BookOpen className="h-5 w-5 text-blue-500" />
                 </div>
                 <div>
@@ -115,7 +122,7 @@ export default function LearningPage() {
           <Card>
             <CardContent className="p-4">
               <div className="flex items-center gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-yellow-500/10">
+                <div className="icon-box flex h-10 w-10 items-center justify-center rounded-lg bg-yellow-500/10">
                   <Clock className="h-5 w-5 text-yellow-500" />
                 </div>
                 <div>
@@ -125,7 +132,7 @@ export default function LearningPage() {
               </div>
             </CardContent>
           </Card>
-        </div>
+        </motion.div>
 
         {/* Recommendations */}
         {learningRecommendations.length > 0 && (
@@ -144,7 +151,7 @@ export default function LearningPage() {
                       onClick={() => handleSelectModule(rec.moduleId)}
                       className="flex items-start gap-3 rounded-lg bg-background/80 p-4 text-left transition-all hover:bg-background"
                     >
-                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10">
+                      <div className="icon-box flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10">
                         <BookOpen className="h-5 w-5 text-primary" />
                       </div>
                       <div className="flex-1 min-w-0">
@@ -195,7 +202,7 @@ export default function LearningPage() {
         </div>
 
         {/* Module Grid */}
-        <div className="grid gap-4 md:grid-cols-2">
+        <motion.div variants={staggerItem} className="grid gap-4 md:grid-cols-2">
           {filteredModules.map((module) => (
             <ModuleCard
               key={module.id}
@@ -203,7 +210,7 @@ export default function LearningPage() {
               onSelect={handleSelectModule}
             />
           ))}
-        </div>
+        </motion.div>
 
         {filteredModules.length === 0 && (
           <div className="text-center py-12">
@@ -212,7 +219,7 @@ export default function LearningPage() {
             <p className="text-muted-foreground">Try adjusting your search or filters</p>
           </div>
         )}
-      </div>
+      </motion.div>
     </AppShell>
   )
 }

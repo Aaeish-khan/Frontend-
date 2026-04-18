@@ -49,6 +49,8 @@ import {
   Clock,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { motion } from "framer-motion"
+import { staggerContainer, staggerItem, cardVariants, viewportOnce } from "@/lib/animations"
 
 // ── Mission action links ──────────────────────────────────────────────────────
 
@@ -785,9 +787,14 @@ export default function GamificationPage() {
 
   return (
     <AppShell title="Gamification" description="Track your progress, earn badges, and level up">
-      <div className="space-y-6">
-
+      <motion.div
+        className="space-y-6"
+        initial="hidden"
+        animate="visible"
+        variants={staggerContainer}
+      >
         {/* Level & XP Hero */}
+        <motion.div variants={staggerItem}>
         <Card className="overflow-hidden">
           <div className="bg-gradient-to-r from-primary/10 via-primary/5 to-transparent p-6">
             <div className="flex flex-col items-center gap-6 md:flex-row">
@@ -807,7 +814,12 @@ export default function GamificationPage() {
                   {(profile.xp?.total ?? 0).toLocaleString()} XP total &middot; {profile.xp?.todayXP ?? 0} XP today
                 </p>
                 <div className="mt-4 h-3 w-full max-w-md overflow-hidden rounded-full bg-muted">
-                  <div className="h-full rounded-full bg-primary transition-all" style={{ width: `${profile.progressPercent}%` }} />
+                  <motion.div
+                    className="h-full rounded-full bg-gradient-to-r from-indigo-500 to-purple-600"
+                    initial={{ width: 0 }}
+                    animate={{ width: `${profile.progressPercent}%` }}
+                    transition={{ duration: 1, ease: "easeOut", delay: 0.4 }}
+                  />
                 </div>
                 <p className="mt-2 text-sm text-muted-foreground">
                   {(profile.xpToNextLevel ?? 0).toLocaleString()} XP to next level
@@ -836,8 +848,10 @@ export default function GamificationPage() {
             </div>
           </div>
         </Card>
+        </motion.div>
 
         {/* Tabs */}
+        <motion.div variants={staggerItem}>
         <Tabs defaultValue="overview">
           <TabsList className="w-full sm:w-auto">
             <TabsTrigger value="overview">Overview</TabsTrigger>
@@ -867,7 +881,8 @@ export default function GamificationPage() {
             <XPLogTab log={xpLog} />
           </TabsContent>
         </Tabs>
-      </div>
+        </motion.div>
+      </motion.div>
     </AppShell>
   )
 }

@@ -8,6 +8,8 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { Plus, Building2, Briefcase, Sparkles, FolderOpen } from "lucide-react";
+import { motion } from "framer-motion";
+import { staggerContainer, staggerItem, cardVariants } from "@/lib/animations";
 
 function scoreColor(score: number) {
   if (score >= 80) return "text-green-500";
@@ -36,7 +38,12 @@ export default function ProjectsPage() {
 
   return (
     <AppShell title="Projects" description="Track your job applications, resumes, and interview prep">
-      <div className="space-y-6">
+      <motion.div
+        className="space-y-6"
+        initial="hidden"
+        animate="visible"
+        variants={staggerContainer}
+      >
         {/* Header row */}
         <div className="flex items-center justify-between">
           <div>
@@ -84,7 +91,7 @@ export default function ProjectsPage() {
         {!loading && !error && projects.length === 0 && (
           <Card className="card-futuristic">
             <CardContent className="flex flex-col items-center gap-4 p-12 text-center">
-              <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-primary/10 ring-1 ring-primary/20">
+              <div className="icon-box flex h-16 w-16 items-center justify-center rounded-2xl bg-primary/10 ring-1 ring-primary/20">
                 <FolderOpen className="h-8 w-8 text-primary" />
               </div>
               <div>
@@ -116,7 +123,7 @@ export default function ProjectsPage() {
                     <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-primary/30 to-transparent" />
                     <CardContent className="p-5">
                       <div className="flex items-start justify-between gap-3">
-                        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 ring-1 ring-primary/20 transition-transform duration-200 group-hover:scale-110">
+                        <div className="icon-box flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 ring-1 ring-primary/20 transition-transform duration-200 group-hover:scale-110">
                           <Sparkles className="h-5 w-5 text-primary" />
                         </div>
                         <span className={cn("rounded-full px-2.5 py-0.5 text-xs font-medium capitalize", statusStyles[project.status] ?? statusStyles.active)}>
@@ -166,7 +173,7 @@ export default function ProjectsPage() {
             })}
           </div>
         )}
-      </div>
+      </motion.div>
     </AppShell>
   );
 }

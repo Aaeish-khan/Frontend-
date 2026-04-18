@@ -89,7 +89,7 @@ export function ModuleCard({ module, onSelect }: ModuleCardProps) {
             </div>
             <div className="h-2 w-20 overflow-hidden rounded-full bg-muted">
               <div 
-                className="h-full rounded-full bg-primary transition-all"
+                className="h-full rounded-full bg-gradient-to-r from-indigo-500 to-purple-600 transition-all"
                 style={{ width: `${module.progress}%` }}
               />
             </div>

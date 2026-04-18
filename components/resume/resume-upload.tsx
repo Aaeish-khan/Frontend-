@@ -75,8 +75,8 @@ export function ResumeUpload({ onAnalyze }: ResumeUploadProps) {
               onDragLeave={handleDragLeave}
               onDrop={handleDrop}
               className={cn(
-                "relative flex min-h-[200px] cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed transition-colors",
-                isDragging ? "border-primary bg-primary/5" : "border-border hover:border-primary/50"
+                "relative flex min-h-[200px] cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed transition-all duration-300",
+                isDragging ? "border-primary bg-primary/10 shadow-[0_0_30px_rgba(99,102,241,0.2)] scale-[1.01]" : "border-white/15 hover:border-primary/50 hover:bg-white/3"
               )}
             >
               <input

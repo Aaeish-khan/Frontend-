@@ -62,13 +62,13 @@ export function InterviewSetup({ onStart }: InterviewSetupProps) {
                   key={category.id}
                   onClick={() => setSelectedCategory(category.id)}
                   className={cn(
-                    "flex flex-col items-start gap-3 rounded-lg border p-4 text-left transition-all hover:border-primary/50",
-                    isSelected ? "border-primary bg-primary/5" : "border-border"
+                    "flex flex-col items-start gap-3 rounded-lg border p-4 text-left transition-all duration-200 hover:border-primary/50",
+                    isSelected ? "border-primary/60 bg-gradient-to-br from-primary/10 to-purple-500/5 shadow-[0_0_20px_rgba(99,102,241,0.1)]" : "border-white/8 hover:bg-white/3"
                   )}
                 >
                   <div className={cn(
-                    "flex h-10 w-10 items-center justify-center rounded-lg",
-                    isSelected ? "bg-primary text-primary-foreground" : "bg-muted"
+                    "flex h-10 w-10 items-center justify-center rounded-lg transition-all",
+                    isSelected ? "bg-gradient-to-br from-primary to-purple-600 text-white shadow-lg shadow-primary/30" : "bg-white/5 border border-white/10"
                   )}>
                     <Icon className="h-5 w-5" />
                   </div>
