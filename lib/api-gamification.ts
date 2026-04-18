@@ -98,6 +98,38 @@ export type SkillTree = {
   cs_fundamentals?: SkillTreeNode[];
 };
 
+export type NextBestAction = {
+  priority:    "high" | "medium" | "low";
+  type:        string;
+  label:       string;
+  description: string;
+  hrefType:    "learning" | "interview" | "peer_review" | "resume" | "streak_preserve";
+};
+
+export type ProjectReadiness = {
+  projectId:  string;
+  targetRole: string;
+  readiness:  number;
+  completed:  number;
+  total:      number;
+};
+
+export type ReadinessSummary = {
+  globalReadiness: number;
+  projects: ProjectReadiness[];
+};
+
+export type CoachMessage = {
+  message:     string;
+  suggestions: string[];
+  cached:      boolean;
+};
+
+export type XPContribution = {
+  action: string;
+  xp:     number;
+};
+
 export type GamificationProfile = {
   xp: { total: number; todayXP: number; weekXP: number };
   level: number;
@@ -204,4 +236,20 @@ export async function updateSkillTreeNode(
     method: "PATCH",
     body: JSON.stringify({ status }),
   });
+}
+
+export async function getReadinessSummary(): Promise<ReadinessSummary> {
+  return authFetch(`${API_URL}/gamification/readiness`);
+}
+
+export async function getNextBestAction(): Promise<{ actions: NextBestAction[] }> {
+  return authFetch(`${API_URL}/gamification/next-best-action`);
+}
+
+export async function getCoachMessage(): Promise<CoachMessage> {
+  return authFetch(`${API_URL}/gamification/coach`);
+}
+
+export async function getContributions(): Promise<{ byAction: XPContribution[]; totalEntries: number }> {
+  return authFetch(`${API_URL}/gamification/contributions`);
 }
