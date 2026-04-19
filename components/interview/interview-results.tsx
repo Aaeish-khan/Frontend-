@@ -474,7 +474,7 @@ export function InterviewResults({ results, onRetry }: InterviewResultsProps) {
                   icon: Users,
                   label: "Peer Review",
                   desc:  "Get feedback from a teammate",
-                  href:  "/peer-review",
+                  href:  "/peer-reviews",
                   cls:   "border-cyan-500/20 hover:border-cyan-500/40 hover:bg-cyan-500/5",
                   icls:  "text-cyan-400 bg-cyan-500/10",
                 },

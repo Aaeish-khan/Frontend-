@@ -31,7 +31,7 @@ const globalNavigation = [
   { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
   { name: "Projects", href: "/projects", icon: FolderKanban },
   { name: "Gamification", href: "/gamification", icon: Trophy },
-  { name: "Peer Review", href: "/peer-review", icon: Users },
+  { name: "Peer Review", href: "/peer-reviews", icon: Users },
   { name: "Reports", href: "/reports", icon: FileBarChart },
 ]
 
