@@ -258,6 +258,12 @@ export async function answerProjectInterviewRequest(
   });
 }
 
+export async function deleteInterviewSessionRequest(projectId: string, sessionId: string) {
+  return authFetch(`${API_URL}/projects/${projectId}/interview/${sessionId}`, {
+    method: "DELETE",
+  });
+}
+
 export async function transcribeInterviewAnswerRequest(
   projectId: string,
   sessionId: string,
@@ -314,6 +320,37 @@ export async function analyzeProjectResumeRequest(
 
 // ─── Learning ──────────────────────────────────────────────────────────────────
 
+export type TargetedResource = {
+  concept: string;
+  label: string;
+  url: string;
+  platform: string;
+  type: string;
+  whyThisHelps: string;
+};
+
+export type ConceptDiagnosis = {
+  skillLevel: "beginner" | "intermediate" | "advanced";
+  scorePct: number;
+  conceptsKnown: string[];
+  conceptsWeak: string[];
+  targetedResources: TargetedResource[];
+  summary: string;
+  diagnosedAt?: string;
+};
+
+export type ProjectRecommendation = {
+  title: string;
+  description: string;
+  difficulty: "beginner" | "intermediate" | "advanced";
+  estimatedHours: number;
+  primarySkill: string;
+  relatedSkills: string[];
+  whyThisProject: string;
+  steps: string[];
+  weakAreasAddressed: string[];
+};
+
 export type LearningModule = {
   id: string;
   title: string;
@@ -327,9 +364,10 @@ export type LearningModule = {
   status: "not_started" | "in_progress" | "completed" | "needs_review";
   orderIndex: number;
   resources: { label: string; url: string; platform: string; type: string }[];
-  quiz: { id: string; question: string; options: string[]; difficulty: string }[];
+  quiz: { id: string; question: string; options: string[]; difficulty: string; conceptTested?: string }[];
   quizAttempts: { attemptedAt: string; score: number; passed: boolean }[];
   bestQuizScore: number | null;
+  conceptDiagnosis?: ConceptDiagnosis | null;
   labSpec?: {
     title: string;
     description: string;
@@ -345,6 +383,7 @@ export type LearningPlan = {
   projectId: string;
   targetRole: string;
   roleFocus: string;
+  projectRecommendations?: ProjectRecommendation[];
   diagnosis: {
     weaknesses: {
       key: string;
@@ -396,6 +435,7 @@ export type QuizResult = {
     correct: boolean;
     explanation: string;
   }[];
+  conceptDiagnosis?: ConceptDiagnosis | null;
   module: { id: string; status: string; bestQuizScore: number | null; attemptCount: number };
   progress: LearningPlan["progress"];
 };
@@ -455,5 +495,13 @@ export async function completeLabRequest(
   return authFetch(`${API_URL}/projects/${projectId}/learning/lab/${moduleId}/complete`, {
     method: "PATCH",
     body: JSON.stringify({ completed }),
+  });
+}
+
+export async function generateProjectRecommendationsRequest(
+  projectId: string
+): Promise<{ projects: ProjectRecommendation[] }> {
+  return authFetch(`${API_URL}/projects/${projectId}/learning/projects`, {
+    method: "POST",
   });
 }

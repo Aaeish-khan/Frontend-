@@ -19,6 +19,7 @@ import {
   getCoachMessage,
   getContributions,
   getBadgeProgress,
+  updateSkillTreeNode,
   type GamificationProfile,
   type Mission,
   type Badge,
@@ -491,14 +492,50 @@ function NodeIcon({ status }: { status: SkillTreeNode["status"] | undefined }) {
   return <Lock className="h-3 w-3" />
 }
 
-function SkillTreeTab({ tree }: { tree: SkillTree }) {
+const STATUS_CYCLE: SkillTreeNode["status"][] = ["locked", "unlocked", "in_progress", "completed", "mastered"]
+
+function SkillTreeTab({ initialTree }: { initialTree: SkillTree }) {
+  const [tree, setTree] = useState<SkillTree>(initialTree)
+  const [updating, setUpdating] = useState<string | null>(null)
+
   const getStatus = (key: keyof SkillTree, nodeId: string): SkillTreeNode["status"] | undefined =>
     (tree[key] ?? []).find(n => n.nodeId === nodeId)?.status
+
+  async function cycleNode(domain: keyof SkillTree, nodeId: string) {
+    const updateKey = `${domain}:${nodeId}`
+    if (updating === updateKey) return
+
+    const current = getStatus(domain, nodeId) ?? "locked"
+    const idx = STATUS_CYCLE.indexOf(current)
+    const next = STATUS_CYCLE[(idx + 1) % STATUS_CYCLE.length]
+
+    setTree(prev => {
+      const nodes = [...(prev[domain] ?? [])]
+      const i = nodes.findIndex(n => n.nodeId === nodeId)
+      if (i >= 0) nodes[i] = { ...nodes[i], status: next }
+      else nodes.push({ nodeId, status: next } as SkillTreeNode)
+      return { ...prev, [domain]: nodes }
+    })
+
+    setUpdating(updateKey)
+    try {
+      await updateSkillTreeNode(domain, nodeId, next)
+    } catch {
+      setTree(prev => {
+        const nodes = [...(prev[domain] ?? [])]
+        const i = nodes.findIndex(n => n.nodeId === nodeId)
+        if (i >= 0) nodes[i] = { ...nodes[i], status: current }
+        return { ...prev, [domain]: nodes }
+      })
+    } finally {
+      setUpdating(null)
+    }
+  }
 
   return (
     <div className="space-y-4">
       <p className="text-sm text-muted-foreground">
-        Skills unlock as you complete modules, quizzes, and interviews. Master a node by scoring 100% on its quiz.
+        Click any node to cycle its status and track your progress manually. Nodes also update automatically as you complete modules and quizzes.
       </p>
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         {SKILL_TREE_DOMAINS.map(({ key, label, icon: Icon, nodes }) => {
@@ -517,12 +554,24 @@ function SkillTreeTab({ tree }: { tree: SkillTree }) {
               <CardContent className="px-4 pb-4 space-y-1">
                 {nodes.map(node => {
                   const status = getStatus(key, node.id)
+                  const isUpdating = updating === `${key}:${node.id}`
                   return (
-                    <div key={node.id} className={cn("flex items-center gap-2 rounded-md border px-2.5 py-1.5 text-xs font-medium transition-colors", nodeStatusStyle(status), (!status || status === "locked") && "opacity-50")}>
+                    <button
+                      key={node.id}
+                      onClick={() => cycleNode(key, node.id)}
+                      title="Click to update status"
+                      className={cn(
+                        "w-full flex items-center gap-2 rounded-md border px-2.5 py-1.5 text-xs font-medium transition-colors text-left",
+                        "hover:brightness-95 active:scale-[0.98] cursor-pointer select-none",
+                        nodeStatusStyle(status),
+                        (!status || status === "locked") && "opacity-50",
+                        isUpdating && "animate-pulse"
+                      )}
+                    >
                       <NodeIcon status={status} />
                       <span className="flex-1">{node.label}</span>
                       {status === "mastered" && <span className="text-yellow-500">★</span>}
-                    </div>
+                    </button>
                   )
                 })}
               </CardContent>
@@ -540,6 +589,7 @@ function SkillTreeTab({ tree }: { tree: SkillTree }) {
             <span className="text-muted-foreground capitalize">{status.replace("_", " ")}</span>
           </div>
         ))}
+        <p className="text-muted-foreground text-xs ml-auto self-center">Click a node to cycle status</p>
       </div>
     </div>
   )
@@ -1006,7 +1056,7 @@ export default function GamificationPage() {
             </TabsContent>
 
             <TabsContent value="skill-tree" className="mt-6">
-              <SkillTreeTab tree={skillTree} />
+              <SkillTreeTab initialTree={skillTree} />
             </TabsContent>
 
             <TabsContent value="xp-log" className="mt-6">

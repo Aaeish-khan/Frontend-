@@ -605,6 +605,22 @@ function ResultsDashboard({
   );
 }
 
+// ─── Normalise backend response (guards against null/undefined arrays) ────────
+function normalizeAnalysis(a: ResumeAnalysis): ResumeAnalysis {
+  return {
+    ...a,
+    jdKeywords:             Array.isArray(a.jdKeywords)             ? a.jdKeywords             : [],
+    jdRequiredSkills:       Array.isArray(a.jdRequiredSkills)       ? a.jdRequiredSkills       : [],
+    jdNiceToHave:           Array.isArray(a.jdNiceToHave)           ? a.jdNiceToHave           : [],
+    missingKeywords:        Array.isArray(a.missingKeywords)        ? a.missingKeywords        : [],
+    resumeStrengths:        Array.isArray(a.resumeStrengths)        ? a.resumeStrengths        : [],
+    resumeWeaknesses:       Array.isArray(a.resumeWeaknesses)       ? a.resumeWeaknesses       : [],
+    atsSuggestions:         Array.isArray(a.atsSuggestions)         ? a.atsSuggestions         : [],
+    improvementSuggestions: Array.isArray(a.improvementSuggestions) ? a.improvementSuggestions : [],
+    suggestions:            Array.isArray(a.suggestions)            ? a.suggestions            : [],
+  };
+}
+
 // ─── Main page ─────────────────────────────────────────────────────────────────
 export default function ProjectResumePage() {
   const params = useParams();
@@ -624,7 +640,7 @@ export default function ProjectResumePage() {
       .then((data) => {
         setJdPreview(data.jobDescription || "");
         if (data.hasAnalysis) {
-          setAnalysis(data as ResumeAnalysis);
+          setAnalysis(normalizeAnalysis(data as ResumeAnalysis));
           setStage("done");
         } else {
           setStage("upload");
@@ -641,7 +657,7 @@ export default function ProjectResumePage() {
 
     try {
       const result = await analyzeProjectResumeRequest(projectId, file);
-      setAnalysis(result.analysis);
+      setAnalysis(normalizeAnalysis(result.analysis));
       setStage("done");
     } catch (err) {
       setErrorMsg(err instanceof Error ? err.message : "Analysis failed. Please try again.");

@@ -8,13 +8,14 @@ import {
   startProjectInterviewRequest,
   answerProjectInterviewRequest,
   transcribeInterviewAnswerRequest,
+  deleteInterviewSessionRequest,
 } from "@/lib/api-projects";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
   Camera, Mic, MicOff, Video, VideoOff, StopCircle, ChevronRight,
   Clock, CheckCircle, AlertCircle, Trophy, Check, Play, Loader2,
-  Square, Sparkles, Download,
+  Square, Sparkles, Download, Volume2, VolumeX, Trash2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
@@ -255,6 +256,12 @@ export default function ProjectInterviewPage() {
   // Phase 4 — persona + session recording
   const [selectedPersona, setSelectedPersona] = useState<Persona>("mixed");
   const [sessionRecordingUrl, setSessionRecordingUrl] = useState<string | null>(null);
+  const [isTTSEnabled, setIsTTSEnabled] = useState(true);
+
+  // Delete session
+  const [deletingSessionId, setDeletingSessionId] = useState<string | null>(null);
+  const [deleteConfirmId,   setDeleteConfirmId]   = useState<string | null>(null);
+  const [showDeleteDoneConfirm, setShowDeleteDoneConfirm] = useState(false);
   const sessionRecorderRef = useRef<MediaRecorder | null>(null);
   const sessionChunksRef   = useRef<Blob[]>([]);
 
@@ -282,7 +289,10 @@ export default function ProjectInterviewPage() {
 
   // ── Attach stream to video ──
   useEffect(() => {
-    if (videoRef.current && stream) videoRef.current.srcObject = stream;
+    if (videoRef.current && stream) {
+      videoRef.current.srcObject = stream;
+      videoRef.current.play().catch(() => {});
+    }
   }, [stream]);
 
   // ── Cleanup ──
@@ -297,7 +307,10 @@ export default function ProjectInterviewPage() {
       .then(s => {
         streamRef.current = s;
         setStream(s);
-        if (videoRef.current) videoRef.current.srcObject = s;
+        if (videoRef.current) {
+          videoRef.current.srcObject = s;
+          videoRef.current.play().catch(() => {});
+        }
         // Start session-level recording (video + audio)
         if (typeof MediaRecorder !== "undefined" && MediaRecorder.isTypeSupported("video/webm")) {
           sessionChunksRef.current = [];
@@ -318,13 +331,47 @@ export default function ProjectInterviewPage() {
     return () => clearTimeout(id);
   }, [stage, countdown]);
 
-  // ── Typewriter → listening ──
+  // ── AI question voice-over (TTS) → then switch to listening ──
   useEffect(() => {
     if (stage !== "session" || interviewerState !== "asking" || !currentQ) return;
-    const words = currentQ.question.split(" ").length;
-    const id = setTimeout(() => setInterviewerState("listening"), words * WORD_STAGGER * 1000 + 700);
-    return () => clearTimeout(id);
-  }, [currentIndex, interviewerState, stage, currentQ]);
+
+    if (isTTSEnabled && typeof window !== "undefined" && "speechSynthesis" in window) {
+      window.speechSynthesis.cancel();
+      const utterance = new SpeechSynthesisUtterance(currentQ.question);
+      utterance.rate = 0.9;
+      utterance.pitch = 1.05;
+      utterance.onend = () => setInterviewerState("listening");
+
+      const speak = () => {
+        const voices = window.speechSynthesis.getVoices();
+        const preferred =
+          voices.find(v => v.lang.startsWith("en") && v.name.toLowerCase().includes("google")) ||
+          voices.find(v => v.lang.startsWith("en")) ||
+          voices[0];
+        if (preferred) utterance.voice = preferred;
+        window.speechSynthesis.speak(utterance);
+      };
+
+      if (window.speechSynthesis.getVoices().length > 0) {
+        speak();
+      } else {
+        window.speechSynthesis.onvoiceschanged = speak;
+      }
+      return () => { window.speechSynthesis.cancel(); };
+    } else {
+      // Fallback: timer proportional to question length
+      const words = currentQ.question.split(" ").length;
+      const id = setTimeout(() => setInterviewerState("listening"), words * WORD_STAGGER * 1000 + 700);
+      return () => clearTimeout(id);
+    }
+  }, [currentIndex, interviewerState, stage, currentQ, isTTSEnabled]);
+
+  // ── Stop TTS when leaving session ──
+  useEffect(() => {
+    if (stage !== "session" && typeof window !== "undefined" && "speechSynthesis" in window) {
+      window.speechSynthesis.cancel();
+    }
+  }, [stage]);
 
   // ── Per-question timer (resets on question change) ──
   useEffect(() => {
@@ -458,6 +505,25 @@ export default function ProjectInterviewPage() {
     streamRef.current?.getTracks().forEach(t => t.stop());
     setStage("done");
     loadHistory();
+  }
+
+  async function handleDeleteSession(sessionId: string, thenGoBack = false) {
+    setDeletingSessionId(sessionId);
+    try {
+      await deleteInterviewSessionRequest(projectId, sessionId);
+      setHistory(h => h.filter(s => s._id !== sessionId));
+      if (thenGoBack) {
+        setSessionRecordingUrl(null);
+        setCurrentSession(null);
+        setStage("history");
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to delete session");
+    } finally {
+      setDeletingSessionId(null);
+      setDeleteConfirmId(null);
+      setShowDeleteDoneConfirm(false);
+    }
   }
 
   function handleExportPDF() {
@@ -726,6 +792,20 @@ export default function ProjectInterviewPage() {
                 <Button variant={isVideoOff ? "destructive" : "secondary"} size="icon" className="h-10 w-10 rounded-full" onClick={toggleVideo}>
                   {isVideoOff ? <VideoOff className="h-4 w-4" /> : <Video className="h-4 w-4" />}
                 </Button>
+                <Button
+                  variant={isTTSEnabled ? "secondary" : "outline"}
+                  size="icon"
+                  className="h-10 w-10 rounded-full"
+                  title={isTTSEnabled ? "AI voice on — click to mute" : "AI voice off — click to enable"}
+                  onClick={() => {
+                    if (isTTSEnabled && typeof window !== "undefined" && "speechSynthesis" in window) {
+                      window.speechSynthesis.cancel();
+                    }
+                    setIsTTSEnabled(v => !v);
+                  }}
+                >
+                  {isTTSEnabled ? <Volume2 className="h-4 w-4" /> : <VolumeX className="h-4 w-4" />}
+                </Button>
               </div>
 
               <AnimatePresence mode="wait">
@@ -849,23 +929,63 @@ export default function ProjectInterviewPage() {
             </Card>
           )}
 
-          <div className="flex flex-wrap gap-3 justify-end">
-            {sessionRecordingUrl && (
-              <a href={sessionRecordingUrl} download="interview-recording.webm">
-                <Button variant="outline" className="gap-2">
-                  <Download className="h-4 w-4" />Download Recording
+          <div className="flex flex-wrap gap-3 justify-between items-center">
+            {/* Left: destructive actions */}
+            <div className="flex flex-wrap gap-2">
+              {sessionRecordingUrl && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="gap-1.5 text-xs text-muted-foreground hover:text-red-500"
+                  onClick={() => setSessionRecordingUrl(null)}
+                >
+                  <Trash2 className="h-3.5 w-3.5" />Clear Recording
                 </Button>
-              </a>
-            )}
-            <Button variant="outline" className="gap-2" onClick={handleExportPDF}>
-              <Download className="h-4 w-4" />Export PDF
-            </Button>
-            <Button variant="outline" onClick={() => { setStage("history"); setCurrentSession(null); }}>
-              Back to History
-            </Button>
-            <Button onClick={() => { setCurrentSession(null); setStage("history"); handleStart(); }} className="gap-2">
-              <Play className="h-4 w-4" />Try Again
-            </Button>
+              )}
+              {showDeleteDoneConfirm ? (
+                <span className="flex items-center gap-1.5">
+                  <span className="text-xs text-muted-foreground">Delete this session permanently?</span>
+                  <Button
+                    size="sm" variant="destructive" className="h-7 px-2.5 text-xs"
+                    disabled={deletingSessionId === currentSession._id}
+                    onClick={() => handleDeleteSession(currentSession._id, true)}
+                  >
+                    {deletingSessionId === currentSession._id ? <Loader2 className="h-3 w-3 animate-spin" /> : "Yes, Delete"}
+                  </Button>
+                  <Button size="sm" variant="ghost" className="h-7 px-2 text-xs" onClick={() => setShowDeleteDoneConfirm(false)}>
+                    Cancel
+                  </Button>
+                </span>
+              ) : (
+                <Button
+                  variant="ghost" size="sm"
+                  className="gap-1.5 text-xs text-muted-foreground hover:text-red-500"
+                  onClick={() => setShowDeleteDoneConfirm(true)}
+                >
+                  <Trash2 className="h-3.5 w-3.5" />Delete Session &amp; Report
+                </Button>
+              )}
+            </div>
+
+            {/* Right: normal actions */}
+            <div className="flex flex-wrap gap-3">
+              {sessionRecordingUrl && (
+                <a href={sessionRecordingUrl} download="interview-recording.webm">
+                  <Button variant="outline" className="gap-2">
+                    <Download className="h-4 w-4" />Download Recording
+                  </Button>
+                </a>
+              )}
+              <Button variant="outline" className="gap-2" onClick={handleExportPDF}>
+                <Download className="h-4 w-4" />Export PDF
+              </Button>
+              <Button variant="outline" onClick={() => { setStage("history"); setCurrentSession(null); }}>
+                Back to History
+              </Button>
+              <Button onClick={() => { setCurrentSession(null); setStage("history"); handleStart(); }} className="gap-2">
+                <Play className="h-4 w-4" />Try Again
+              </Button>
+            </div>
           </div>
         </motion.div>
       </AppShell>
@@ -940,14 +1060,14 @@ export default function ProjectInterviewPage() {
               <p className="text-sm text-muted-foreground py-4 text-center">No sessions yet. Start your first interview above.</p>
             ) : (
               history.map((s) => (
-                <div key={s._id} className="flex items-center justify-between rounded-xl border border-border p-4">
-                  <div>
-                    <p className="font-medium text-sm">{s.title}</p>
+                <div key={s._id} className="flex items-center justify-between rounded-xl border border-border p-4 gap-3">
+                  <div className="flex-1 min-w-0">
+                    <p className="font-medium text-sm truncate">{s.title}</p>
                     {s.completedAt && (
                       <p className="text-xs text-muted-foreground mt-0.5">{formatDate(s.completedAt)}</p>
                     )}
                   </div>
-                  <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-3 shrink-0">
                     {s.overallScore != null && (
                       <span className={cn("text-sm font-bold", scoreColor(s.overallScore))}>
                         {s.overallScore}/10
@@ -956,6 +1076,32 @@ export default function ProjectInterviewPage() {
                     {s.completedAt
                       ? <span className="flex items-center gap-1 text-xs text-green-500"><CheckCircle className="h-3 w-3" />Done</span>
                       : <span className="text-xs text-yellow-500">In progress</span>}
+
+                    {/* Delete inline confirm */}
+                    {deleteConfirmId === s._id ? (
+                      <span className="flex items-center gap-1.5">
+                        <span className="text-xs text-muted-foreground">Delete?</span>
+                        <Button
+                          size="sm" variant="destructive"
+                          className="h-6 px-2 text-xs"
+                          disabled={deletingSessionId === s._id}
+                          onClick={() => handleDeleteSession(s._id)}
+                        >
+                          {deletingSessionId === s._id ? <Loader2 className="h-3 w-3 animate-spin" /> : "Yes"}
+                        </Button>
+                        <Button size="sm" variant="ghost" className="h-6 px-2 text-xs" onClick={() => setDeleteConfirmId(null)}>
+                          No
+                        </Button>
+                      </span>
+                    ) : (
+                      <Button
+                        size="icon" variant="ghost"
+                        className="h-7 w-7 text-muted-foreground hover:text-red-500"
+                        onClick={() => setDeleteConfirmId(s._id)}
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </Button>
+                    )}
                   </div>
                 </div>
               ))
