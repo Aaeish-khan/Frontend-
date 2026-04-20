@@ -505,3 +505,16 @@ export async function generateProjectRecommendationsRequest(
     method: "POST",
   });
 }
+
+export async function getInterviewReportHtmlRequest(
+  projectId: string,
+  sessionId: string
+): Promise<string> {
+  const token = getToken();
+  const res = await fetch(
+    `${API_URL}/projects/${projectId}/interview/${sessionId}/report`,
+    { headers: { Authorization: `Bearer ${token}` } }
+  );
+  if (!res.ok) throw new Error("Failed to fetch report");
+  return res.text();
+}

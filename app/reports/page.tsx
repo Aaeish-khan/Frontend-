@@ -1,11 +1,10 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { AppShell } from "@/components/layout/app-shell"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { reports, interviewHistory, userStats } from "@/lib/mock-data"
 import {
   Download,
   FileText,
@@ -16,141 +15,291 @@ import {
   TrendingUp,
   Eye,
   Trash2,
+  Loader2,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { motion } from "framer-motion"
-import { staggerContainer, staggerItem, cardVariants, viewportOnce } from "@/lib/animations"
+import { staggerContainer, staggerItem } from "@/lib/animations"
+import {
+  getProjectsRequest,
+  getProjectInterviewHistoryRequest,
+  deleteInterviewSessionRequest,
+  getInterviewReportHtmlRequest,
+  type Project,
+} from "@/lib/api-projects"
 
-type ReportType = "all" | "interview" | "resume" | "weekly"
+// ── Types ────────────────────────────────────────────────────────────────────
+
+type ReportType = "all" | "interview" | "resume"
+
+type ReportEntry = {
+  id: string
+  type: "interview" | "resume"
+  title: string
+  subtitle: string
+  date: string
+  score: number | null
+  projectId: string
+  sessionId?: string
+  strengths?: string[]
+  improvements?: string[]
+  recommendation?: string
+  persona?: string
+}
+
+// ── Constants ─────────────────────────────────────────────────────────────────
 
 const reportTypeIcons = {
   interview: Video,
   resume: FileText,
-  weekly: FileBarChart,
 }
 
 const reportTypeColors = {
   interview: "bg-blue-500/10 text-blue-500",
   resume: "bg-green-500/10 text-green-500",
-  weekly: "bg-purple-500/10 text-purple-500",
 }
 
+// ── Helpers ──────────────────────────────────────────────────────────────────
+
+function getScoreColor(score: number | null) {
+  if (!score) return "text-muted-foreground"
+  if (score >= 85) return "text-green-500"
+  if (score >= 70) return "text-primary"
+  if (score >= 50) return "text-yellow-500"
+  return "text-red-500"
+}
+
+function formatDate(dateStr: string | null | undefined): string {
+  if (!dateStr) return "—"
+  return new Date(dateStr).toLocaleDateString("en-US", {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+  })
+}
+
+function buildReports(
+  projects: Project[],
+  sessionsByProject: Record<string, any[]>
+): ReportEntry[] {
+  const entries: ReportEntry[] = []
+
+  for (const project of projects) {
+    // Resume report — only if ATS analysis is done
+    const atsScore =
+      (project.aiInsights as any)?.atsScore ??
+      project.aiInsights?.resumeMatchScore ??
+      null
+    const processedAt = project.aiInsights?.processedAt
+
+    if (atsScore != null && processedAt) {
+      entries.push({
+        id: `resume_${project.id}`,
+        type: "resume",
+        title: `${project.jobRole} Resume Analysis`,
+        subtitle: project.companyName || project.title,
+        date: processedAt,
+        score: atsScore,
+        projectId: project.id,
+      })
+    }
+
+    // Interview reports — completed sessions only
+    for (const session of sessionsByProject[project.id] ?? []) {
+      if (!session.completedAt) continue
+      entries.push({
+        id: `interview_${session._id}`,
+        type: "interview",
+        title: session.title || "Mock Interview",
+        subtitle: `${project.jobRole} · ${project.companyName}`,
+        date: session.completedAt,
+        score: session.overallScore != null ? session.overallScore * 10 : null,
+        projectId: project.id,
+        sessionId: session._id,
+        strengths: session.report?.strengths ?? [],
+        improvements: session.report?.improvements ?? [],
+        recommendation: session.report?.recommendation ?? "",
+        persona: session.persona,
+      })
+    }
+  }
+
+  return entries.sort(
+    (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
+  )
+}
+
+// ── Page ─────────────────────────────────────────────────────────────────────
+
 export default function ReportsPage() {
-  const [reportsList, setReportsList]     = useState(reports)
-  const [search, setSearch]               = useState("")
-  const [activeFilter, setActiveFilter]   = useState<ReportType>("all")
+  const [reports, setReports] = useState<ReportEntry[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const [search, setSearch] = useState("")
+  const [activeFilter, setActiveFilter] = useState<ReportType>("all")
   const [selectedReport, setSelectedReport] = useState<string | null>(null)
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null)
+  const [deleting, setDeleting] = useState(false)
+
+  useEffect(() => {
+    async function load() {
+      try {
+        setLoading(true)
+        const projects = await getProjectsRequest()
+
+        const sessionResults = await Promise.allSettled(
+          projects.map((p) => getProjectInterviewHistoryRequest(p.id))
+        )
+
+        const sessionsByProject: Record<string, any[]> = {}
+        projects.forEach((p, i) => {
+          const result = sessionResults[i]
+          sessionsByProject[p.id] =
+            result.status === "fulfilled" ? result.value : []
+        })
+
+        setReports(buildReports(projects, sessionsByProject))
+      } catch (err: any) {
+        setError(err.message || "Failed to load reports")
+      } finally {
+        setLoading(false)
+      }
+    }
+    load()
+  }, [])
 
   const filters: { id: ReportType; label: string }[] = [
     { id: "all", label: "All Reports" },
     { id: "interview", label: "Interview" },
     { id: "resume", label: "Resume" },
-    { id: "weekly", label: "Weekly" },
   ]
 
-  function handleDeleteReport(id: string) {
-    setReportsList(prev => prev.filter(r => r.id !== id))
-    if (selectedReport === id) setSelectedReport(null)
+  async function handleDeleteReport(report: ReportEntry) {
+    if (report.type === "interview" && report.sessionId) {
+      setDeleting(true)
+      try {
+        await deleteInterviewSessionRequest(report.projectId, report.sessionId)
+      } catch {
+        // still remove from UI
+      } finally {
+        setDeleting(false)
+      }
+    }
+    setReports((prev) => prev.filter((r) => r.id !== report.id))
+    if (selectedReport === report.id) setSelectedReport(null)
     setDeleteConfirmId(null)
   }
 
-  const filteredReports = reportsList.filter(report => {
-    const matchesSearch = report.title.toLowerCase().includes(search.toLowerCase()) ||
-      report.subtitle.toLowerCase().includes(search.toLowerCase())
-    
-    if (!matchesSearch) return false
-    if (activeFilter === "all") return true
-    return report.type === activeFilter
-  })
-
-  const handleDownload = (report: typeof reports[0]) => {
-    // Generate mock report content based on type
-    let content = ""
-    
-    if (report.type === "interview") {
-      const interview = interviewHistory.find(i => report.title.includes(i.category))
-      content = `
-INTERMATE INTERVIEW REPORT
-==========================
-${report.title}
-${report.subtitle}
-Date: ${report.date}
-Score: ${report.score}%
-
-${interview ? `
-DETAILS:
-- Duration: ${interview.duration} minutes
-- Questions: ${interview.questions}
-- Category: ${interview.category}
-
-STRENGTHS:
-${interview.strengths.map(s => `- ${s}`).join("\n")}
-
-AREAS FOR IMPROVEMENT:
-${interview.improvements.map(i => `- ${i}`).join("\n")}
-` : ""}
-
-Generated by InterMate - AI-Powered Interview Preparation Platform
-      `
-    } else if (report.type === "resume") {
-      content = `
-INTERMATE RESUME ANALYSIS REPORT
-================================
-${report.title}
-${report.subtitle}
-Date: ${report.date}
-ATS Score: ${report.score}%
-
-This resume has been analyzed for ATS compatibility and keyword optimization.
-Please refer to the full analysis in the application for detailed suggestions.
-
-Generated by InterMate - AI-Powered Resume Analyzer
-      `
+  async function handleViewFull(report: ReportEntry) {
+    if (report.type === "interview" && report.sessionId) {
+      try {
+        const html = await getInterviewReportHtmlRequest(
+          report.projectId,
+          report.sessionId
+        )
+        const blob = new Blob([html], { type: "text/html" })
+        const url = URL.createObjectURL(blob)
+        const win = window.open(url, "_blank")
+        if (win) setTimeout(() => URL.revokeObjectURL(url), 10000)
+      } catch {
+        window.open("/projects", "_self")
+      }
     } else {
-      content = `
-INTERMATE WEEKLY PROGRESS REPORT
-================================
-${report.title}
-${report.subtitle}
-Date: ${report.date}
+      window.open("/projects", "_self")
+    }
+  }
 
-WEEKLY SUMMARY:
-- Total Interviews: ${userStats.totalInterviews}
-- Average Score: ${userStats.averageScore}%
-- Practice Hours: ${userStats.practiceHours}
-- Badges Earned: ${userStats.badgesEarned}
+  function handleDownload(report: ReportEntry) {
+    let content = ""
 
-SKILL PROGRESS:
-${userStats.skillProgress.map(s => `- ${s.skill}: ${s.score}% (${s.trend})`).join("\n")}
-
-Generated by InterMate - Your Career Preparation Companion
-      `
+    if (report.type === "interview") {
+      const rawScore = report.score != null ? report.score / 10 : null
+      content = [
+        "INTERMATE INTERVIEW REPORT",
+        "==========================",
+        report.title,
+        report.subtitle,
+        `Date: ${formatDate(report.date)}`,
+        rawScore != null ? `Score: ${rawScore}/10 (${report.score}%)` : "",
+        report.persona ? `Persona: ${report.persona}` : "",
+        "",
+        ...(report.strengths?.length
+          ? ["STRENGTHS:", ...report.strengths.map((s) => `- ${s}`), ""]
+          : []),
+        ...(report.improvements?.length
+          ? ["AREAS FOR IMPROVEMENT:", ...report.improvements.map((s) => `- ${s}`), ""]
+          : []),
+        ...(report.recommendation ? [`RECOMMENDATION:`, report.recommendation, ""] : []),
+        "Generated by InterMate - AI-Powered Interview Preparation Platform",
+      ]
+        .filter((l) => l !== undefined)
+        .join("\n")
+    } else {
+      content = [
+        "INTERMATE RESUME ANALYSIS REPORT",
+        "=================================",
+        report.title,
+        report.subtitle,
+        `Date: ${formatDate(report.date)}`,
+        `ATS Score: ${report.score ?? "N/A"}%`,
+        "",
+        "Open the project in InterMate for the full detailed analysis.",
+        "",
+        "Generated by InterMate - AI-Powered Resume Analyzer",
+      ].join("\n")
     }
 
     const blob = new Blob([content], { type: "text/plain" })
     const url = URL.createObjectURL(blob)
     const a = document.createElement("a")
     a.href = url
-    a.download = `InterMate_${report.type}_Report_${report.date}.txt`
+    a.download = `InterMate_${report.type}_${formatDate(report.date).replace(/ /g, "_")}.txt`
     document.body.appendChild(a)
     a.click()
     document.body.removeChild(a)
     URL.revokeObjectURL(url)
   }
 
-  const getScoreColor = (score: number | null) => {
-    if (!score) return "text-muted-foreground"
-    if (score >= 85) return "text-green-500"
-    if (score >= 70) return "text-primary"
-    if (score >= 50) return "text-yellow-500"
-    return "text-red-500"
+  const filteredReports = reports.filter((r) => {
+    const q = search.toLowerCase()
+    if (!r.title.toLowerCase().includes(q) && !r.subtitle.toLowerCase().includes(q))
+      return false
+    if (activeFilter === "all") return true
+    return r.type === activeFilter
+  })
+
+  const selectedReportData = reports.find((r) => r.id === selectedReport)
+  const interviewCount = reports.filter((r) => r.type === "interview").length
+  const resumeCount = reports.filter((r) => r.type === "resume").length
+  const scored = reports.filter((r) => r.score != null)
+  const avgScore =
+    scored.length > 0
+      ? Math.round(scored.reduce((s, r) => s + r.score!, 0) / scored.length)
+      : null
+
+  if (loading) {
+    return (
+      <AppShell title="Reports" description="View and download your interview and resume reports">
+        <div className="flex items-center justify-center min-h-[300px]">
+          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+        </div>
+      </AppShell>
+    )
   }
 
-  const selectedReportData = reports.find(r => r.id === selectedReport)
+  if (error) {
+    return (
+      <AppShell title="Reports" description="View and download your interview and resume reports">
+        <div className="flex flex-col items-center justify-center min-h-[300px] gap-4">
+          <p className="text-destructive">{error}</p>
+          <Button onClick={() => window.location.reload()}>Retry</Button>
+        </div>
+      </AppShell>
+    )
+  }
 
   return (
-    <AppShell 
+    <AppShell
       title="Reports"
       description="View and download your interview and resume reports"
     >
@@ -168,7 +317,7 @@ Generated by InterMate - Your Career Preparation Companion
                 <FileBarChart className="h-6 w-6 text-primary" />
               </div>
               <div>
-                <p className="text-2xl font-bold">{reportsList.length}</p>
+                <p className="text-2xl font-bold">{reports.length}</p>
                 <p className="text-sm text-muted-foreground">Total Reports</p>
               </div>
             </CardContent>
@@ -179,9 +328,7 @@ Generated by InterMate - Your Career Preparation Companion
                 <Video className="h-6 w-6 text-blue-500" />
               </div>
               <div>
-                <p className="text-2xl font-bold">
-                  {reportsList.filter(r => r.type === "interview").length}
-                </p>
+                <p className="text-2xl font-bold">{interviewCount}</p>
                 <p className="text-sm text-muted-foreground">Interview Reports</p>
               </div>
             </CardContent>
@@ -192,9 +339,7 @@ Generated by InterMate - Your Career Preparation Companion
                 <FileText className="h-6 w-6 text-green-500" />
               </div>
               <div>
-                <p className="text-2xl font-bold">
-                  {reportsList.filter(r => r.type === "resume").length}
-                </p>
+                <p className="text-2xl font-bold">{resumeCount}</p>
                 <p className="text-sm text-muted-foreground">Resume Reports</p>
               </div>
             </CardContent>
@@ -205,7 +350,9 @@ Generated by InterMate - Your Career Preparation Companion
                 <TrendingUp className="h-6 w-6 text-yellow-500" />
               </div>
               <div>
-                <p className="text-2xl font-bold">{userStats.averageScore}%</p>
+                <p className="text-2xl font-bold">
+                  {avgScore != null ? `${avgScore}%` : "—"}
+                </p>
                 <p className="text-sm text-muted-foreground">Avg. Score</p>
               </div>
             </CardContent>
@@ -241,11 +388,15 @@ Generated by InterMate - Your Career Preparation Companion
           {/* Reports List */}
           <div className="lg:col-span-2 space-y-3">
             {filteredReports.map((report) => {
-              const Icon = reportTypeIcons[report.type as keyof typeof reportTypeIcons] || FileText
-              const colors = reportTypeColors[report.type as keyof typeof reportTypeColors] || "bg-muted text-muted-foreground"
-              
+              const Icon =
+                reportTypeIcons[report.type as keyof typeof reportTypeIcons] ||
+                FileText
+              const colors =
+                reportTypeColors[report.type as keyof typeof reportTypeColors] ||
+                "bg-muted text-muted-foreground"
+
               return (
-                <Card 
+                <Card
                   key={report.id}
                   className={cn(
                     "cursor-pointer transition-all hover:border-primary/50",
@@ -255,17 +406,24 @@ Generated by InterMate - Your Career Preparation Companion
                 >
                   <CardContent className="p-4">
                     <div className="flex items-center gap-4">
-                      <div className={cn(
-                        "flex h-12 w-12 shrink-0 items-center justify-center rounded-lg",
-                        colors
-                      )}>
+                      <div
+                        className={cn(
+                          "flex h-12 w-12 shrink-0 items-center justify-center rounded-lg",
+                          colors
+                        )}
+                      >
                         <Icon className="h-6 w-6" />
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center justify-between">
                           <p className="font-medium truncate">{report.title}</p>
-                          {report.score && (
-                            <span className={cn("font-bold", getScoreColor(report.score))}>
+                          {report.score != null && (
+                            <span
+                              className={cn(
+                                "font-bold",
+                                getScoreColor(report.score)
+                              )}
+                            >
                               {report.score}%
                             </span>
                           )}
@@ -276,12 +434,15 @@ Generated by InterMate - Your Career Preparation Companion
                         <div className="flex items-center gap-4 mt-2 text-xs text-muted-foreground">
                           <span className="flex items-center gap-1">
                             <Calendar className="h-3 w-3" />
-                            {report.date}
+                            {formatDate(report.date)}
                           </span>
                           <span className="capitalize">{report.type} Report</span>
                         </div>
                       </div>
-                      <div className="flex items-center gap-1" onClick={e => e.stopPropagation()}>
+                      <div
+                        className="flex items-center gap-1"
+                        onClick={(e) => e.stopPropagation()}
+                      >
                         <Button
                           variant="ghost"
                           size="icon"
@@ -292,14 +453,21 @@ Generated by InterMate - Your Career Preparation Companion
                         {deleteConfirmId === report.id ? (
                           <span className="flex items-center gap-1">
                             <Button
-                              size="sm" variant="destructive"
+                              size="sm"
+                              variant="destructive"
                               className="h-7 px-2 text-xs"
-                              onClick={() => handleDeleteReport(report.id)}
+                              disabled={deleting}
+                              onClick={() => handleDeleteReport(report)}
                             >
-                              Delete
+                              {deleting ? (
+                                <Loader2 className="h-3 w-3 animate-spin" />
+                              ) : (
+                                "Delete"
+                              )}
                             </Button>
                             <Button
-                              size="sm" variant="ghost"
+                              size="sm"
+                              variant="ghost"
                               className="h-7 px-2 text-xs"
                               onClick={() => setDeleteConfirmId(null)}
                             >
@@ -308,7 +476,8 @@ Generated by InterMate - Your Career Preparation Companion
                           </span>
                         ) : (
                           <Button
-                            variant="ghost" size="icon"
+                            variant="ghost"
+                            size="icon"
                             className="text-muted-foreground hover:text-red-500"
                             onClick={() => setDeleteConfirmId(report.id)}
                           >
@@ -325,8 +494,14 @@ Generated by InterMate - Your Career Preparation Companion
             {filteredReports.length === 0 && (
               <div className="text-center py-12">
                 <FileBarChart className="mx-auto h-12 w-12 text-muted-foreground" />
-                <h3 className="mt-4 text-lg font-medium">No reports found</h3>
-                <p className="text-muted-foreground">Try adjusting your search or filters</p>
+                <h3 className="mt-4 text-lg font-medium">
+                  {reports.length === 0 ? "No reports yet" : "No reports found"}
+                </h3>
+                <p className="text-muted-foreground">
+                  {reports.length === 0
+                    ? "Complete an interview or resume analysis to see reports here."
+                    : "Try adjusting your search or filters"}
+                </p>
               </div>
             )}
           </div>
@@ -341,28 +516,42 @@ Generated by InterMate - Your Career Preparation Companion
                 <CardContent className="space-y-4">
                   <div className="text-center py-6">
                     {(() => {
-                      const Icon = reportTypeIcons[selectedReportData.type as keyof typeof reportTypeIcons] || FileText
-                      const colors = reportTypeColors[selectedReportData.type as keyof typeof reportTypeColors]
+                      const Icon =
+                        reportTypeIcons[
+                          selectedReportData.type as keyof typeof reportTypeIcons
+                        ] || FileText
+                      const colors =
+                        reportTypeColors[
+                          selectedReportData.type as keyof typeof reportTypeColors
+                        ]
                       return (
-                        <div className={cn(
-                          "mx-auto flex h-16 w-16 items-center justify-center rounded-xl",
-                          colors
-                        )}>
+                        <div
+                          className={cn(
+                            "mx-auto flex h-16 w-16 items-center justify-center rounded-xl",
+                            colors
+                          )}
+                        >
                           <Icon className="h-8 w-8" />
                         </div>
                       )
                     })()}
-                    <h3 className="mt-4 font-semibold">{selectedReportData.title}</h3>
-                    <p className="text-sm text-muted-foreground">{selectedReportData.subtitle}</p>
+                    <h3 className="mt-4 font-semibold">
+                      {selectedReportData.title}
+                    </h3>
+                    <p className="text-sm text-muted-foreground">
+                      {selectedReportData.subtitle}
+                    </p>
                   </div>
 
-                  {selectedReportData.score && (
+                  {selectedReportData.score != null && (
                     <div className="flex items-center justify-between rounded-lg bg-muted p-4">
                       <span className="text-sm font-medium">Score</span>
-                      <span className={cn(
-                        "text-2xl font-bold",
-                        getScoreColor(selectedReportData.score)
-                      )}>
+                      <span
+                        className={cn(
+                          "text-2xl font-bold",
+                          getScoreColor(selectedReportData.score)
+                        )}
+                      >
                         {selectedReportData.score}%
                       </span>
                     </div>
@@ -371,36 +560,71 @@ Generated by InterMate - Your Career Preparation Companion
                   <div className="space-y-2 text-sm">
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">Date</span>
-                      <span>{selectedReportData.date}</span>
+                      <span>{formatDate(selectedReportData.date)}</span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">Type</span>
-                      <span className="capitalize">{selectedReportData.type}</span>
+                      <span className="capitalize">
+                        {selectedReportData.type}
+                      </span>
                     </div>
+                    {selectedReportData.persona && (
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Persona</span>
+                        <span className="capitalize">
+                          {selectedReportData.persona}
+                        </span>
+                      </div>
+                    )}
                   </div>
 
+                  {selectedReportData.recommendation && (
+                    <p className="text-xs text-muted-foreground italic border-l-2 border-primary/30 pl-3">
+                      {selectedReportData.recommendation}
+                    </p>
+                  )}
+
                   <div className="flex gap-2 pt-4">
-                    <Button className="flex-1 gap-2" onClick={() => handleDownload(selectedReportData)}>
+                    <Button
+                      className="flex-1 gap-2"
+                      onClick={() => handleDownload(selectedReportData)}
+                    >
                       <Download className="h-4 w-4" />
                       Download
                     </Button>
-                    <Button variant="outline" className="flex-1 gap-2">
+                    <Button
+                      variant="outline"
+                      className="flex-1 gap-2"
+                      onClick={() => handleViewFull(selectedReportData)}
+                    >
                       <Eye className="h-4 w-4" />
                       View Full
                     </Button>
                   </div>
+
                   <div className="pt-1">
                     {deleteConfirmId === selectedReportData.id ? (
                       <div className="flex items-center gap-2">
-                        <span className="text-xs text-muted-foreground flex-1">Delete permanently?</span>
+                        <span className="text-xs text-muted-foreground flex-1">
+                          Delete permanently?
+                        </span>
                         <Button
-                          size="sm" variant="destructive" className="h-7 px-2.5 text-xs"
-                          onClick={() => handleDeleteReport(selectedReportData.id)}
+                          size="sm"
+                          variant="destructive"
+                          className="h-7 px-2.5 text-xs"
+                          disabled={deleting}
+                          onClick={() => handleDeleteReport(selectedReportData)}
                         >
-                          Yes, Delete
+                          {deleting ? (
+                            <Loader2 className="h-3 w-3 animate-spin" />
+                          ) : (
+                            "Yes, Delete"
+                          )}
                         </Button>
                         <Button
-                          size="sm" variant="ghost" className="h-7 px-2 text-xs"
+                          size="sm"
+                          variant="ghost"
+                          className="h-7 px-2 text-xs"
                           onClick={() => setDeleteConfirmId(null)}
                         >
                           Cancel
@@ -408,12 +632,17 @@ Generated by InterMate - Your Career Preparation Companion
                       </div>
                     ) : (
                       <Button
-                        variant="ghost" size="sm"
+                        variant="ghost"
+                        size="sm"
                         className="w-full gap-2 text-muted-foreground hover:text-red-500 text-xs"
-                        onClick={() => setDeleteConfirmId(selectedReportData.id)}
+                        onClick={() =>
+                          setDeleteConfirmId(selectedReportData.id)
+                        }
                       >
                         <Trash2 className="h-3.5 w-3.5" />
-                        Delete Report
+                        {selectedReportData.type === "interview"
+                          ? "Delete Report"
+                          : "Remove from List"}
                       </Button>
                     )}
                   </div>

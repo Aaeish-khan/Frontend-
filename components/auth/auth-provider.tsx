@@ -23,34 +23,54 @@ type AuthContextType = {
   signup: (data: SignupInput) => Promise<void>;
   logout: () => void;
   demoLogin: () => void;
+  refreshUser: () => Promise<void>;
+  setUser: (user: AuthUser | null) => void;
 };
 
 const AuthContext = createContext<AuthContextType | null>(null);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = useState<AuthUser | null>(null);
+  const [user, setUserState] = useState<AuthUser | null>(null);
   const [loading, setLoading] = useState(true);
+
+  const setUser = (nextUser: AuthUser | null) => {
+    const token = getToken();
+
+    if (token && nextUser) {
+      saveSession(token, nextUser);
+    }
+
+    if (token && !nextUser) {
+      clearSession();
+    }
+
+    setUserState(nextUser);
+  };
+
+  const refreshUser = async () => {
+    const token = getToken();
+
+    if (!token) {
+      clearSession();
+      setUser(null);
+      return;
+    }
+
+    if (token === "demo-token") {
+      const stored = getStoredUser();
+      setUser(stored);
+      return;
+    }
+
+    const me = await getMeRequest(token);
+    saveSession(token, me);
+    setUser(me);
+  };
 
   useEffect(() => {
     const initializeAuth = async () => {
       try {
-        const token = getToken();
-
-        if (!token) {
-          setUser(null);
-          setLoading(false);
-          return;
-        }
-
-        if (token === "demo-token") {
-          const stored = getStoredUser();
-          setUser(stored);
-          setLoading(false);
-          return;
-        }
-
-        const me = await getMeRequest(token);
-        setUser(me);
+        await refreshUser();
       } catch {
         clearSession();
         setUser(null);
@@ -82,6 +102,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         saveSession("demo-token", DEMO_USER);
         setUser(DEMO_USER);
       },
+      refreshUser,
+      setUser,
     }),
     [user, loading]
   );
