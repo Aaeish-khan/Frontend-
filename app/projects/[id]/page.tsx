@@ -69,7 +69,7 @@ export default function ProjectDetailsPage() {
 
     try {
       setDeleting(true);
-      await deleteProjectRequest(project.id);
+      await deleteProjectRequest(projectRouteId);
       router.replace("/projects");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to archive project");
@@ -81,6 +81,7 @@ export default function ProjectDetailsPage() {
   const insights = project?.aiInsights;
   const matchScore = insights?.resumeMatchScore ?? 0;
   const hasAnalysis = insights?.processingStatus === "done";
+  const projectRouteId = project?.id || projectId;
 
   return (
     <AppShell
@@ -94,19 +95,19 @@ export default function ProjectDetailsPage() {
         <div className="space-y-6">
           {/* ── Top actions ── */}
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <Link href="/projects">
-              <Button variant="outline" className="w-full gap-2 sm:w-auto">
+            <Button asChild variant="outline" className="w-full gap-2 sm:w-auto">
+              <Link href="/projects">
                 <ArrowLeft className="h-4 w-4" />
                 Back to Projects
-              </Button>
-            </Link>
+              </Link>
+            </Button>
             <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
-              <Link href={`/projects/${project.id}/edit`}>
-                <Button variant="outline" className="w-full gap-2 sm:w-auto">
+              <Button asChild variant="outline" className="w-full gap-2 sm:w-auto">
+                <Link href={`/projects/${projectRouteId}/edit`}>
                   <PencilLine className="h-4 w-4" />
                   Edit Project
-                </Button>
-              </Link>
+                </Link>
+              </Button>
               <Button variant="destructive" onClick={handleDelete} disabled={deleting} className="w-full gap-2 sm:w-auto">
                 <Trash2 className="h-4 w-4" />
                 {deleting ? "Archiving..." : "Archive"}
@@ -207,30 +208,30 @@ export default function ProjectDetailsPage() {
 
                 {/* Navigation buttons */}
                 <div className="grid gap-2">
-                  <Link href={`/projects/${project.id}/resume`}>
-                    <Button className="w-full gap-2">
+                  <Button asChild className="w-full gap-2">
+                    <Link href={`/projects/${projectRouteId}/resume`}>
                       <Sparkles className="h-4 w-4" />
                       Resume Analyzer
-                    </Button>
-                  </Link>
-                  <Link href={`/projects/${project.id}/interview`}>
-                    <Button variant="outline" className="w-full gap-2">
+                    </Link>
+                  </Button>
+                  <Button asChild variant="outline" className="w-full gap-2">
+                    <Link href={`/projects/${projectRouteId}/interview`}>
                       <MessageSquare className="h-4 w-4" />
                       Mock Interview
-                    </Button>
-                  </Link>
-                  <Link href={`/projects/${project.id}/learning`}>
-                    <Button variant="outline" className="w-full gap-2">
+                    </Link>
+                  </Button>
+                  <Button asChild variant="outline" className="w-full gap-2">
+                    <Link href={`/projects/${projectRouteId}/learning`}>
                       <BookOpen className="h-4 w-4" />
                       Learning Mode
-                    </Button>
-                  </Link>
-                  <Link href={`/projects/${project.id}/outcome`}>
-                    <Button variant="outline" className="w-full gap-2">
+                    </Link>
+                  </Button>
+                  <Button asChild variant="outline" className="w-full gap-2">
+                    <Link href={`/projects/${projectRouteId}/outcome`}>
                       <Target className="h-4 w-4" />
                       Update Outcome
-                    </Button>
-                  </Link>
+                    </Link>
+                  </Button>
                 </div>
               </CardContent>
             </Card>
@@ -253,7 +254,7 @@ export default function ProjectDetailsPage() {
                   ) : (
                     <p className="text-sm text-muted-foreground">
                       No job description added yet.{" "}
-                      <Link href={`/projects/${project.id}/edit`} className="text-primary underline">
+                      <Link href={`/projects/${projectRouteId}/edit`} className="text-primary underline">
                         Edit project
                       </Link>{" "}
                       to add one.
@@ -300,11 +301,11 @@ export default function ProjectDetailsPage() {
                     ) : (
                       <p className="text-sm text-muted-foreground">
                         No resume uploaded yet. Go to{" "}
-                        <Link href={`/projects/${project.id}/resume`} className="text-primary underline">
+                        <Link href={`/projects/${projectRouteId}/resume`} className="text-primary underline">
                           Resume Analyzer
                         </Link>{" "}
                         or{" "}
-                        <Link href={`/projects/${project.id}/edit`} className="text-primary underline">
+                        <Link href={`/projects/${projectRouteId}/edit`} className="text-primary underline">
                           Edit Project
                         </Link>{" "}
                         to upload a PDF.

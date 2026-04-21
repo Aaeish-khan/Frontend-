@@ -287,6 +287,9 @@ function ResultsDashboard({
   onReanalyse: () => void;
 }) {
   const [showJd, setShowJd] = useState(false);
+  const matchedKeywords = Array.isArray(analysis.matchedKeywords)
+    ? analysis.matchedKeywords
+    : analysis.jdKeywords.filter((k) => !analysis.missingKeywords.includes(k));
 
   // Download simple text report
   const downloadReport = () => {
@@ -404,14 +407,12 @@ function ResultsDashboard({
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-green-500">
               <Tag className="h-4 w-4" />
-              Matched Keywords ({analysis.jdKeywords.length - analysis.missingKeywords.length})
+              Matched Keywords ({matchedKeywords.length})
             </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="flex flex-wrap gap-2">
-              {analysis.jdKeywords
-                .filter((k) => !analysis.missingKeywords.includes(k))
-                .map((kw) => (
+              {matchedKeywords.map((kw) => (
                   <span
                     key={kw}
                     className="rounded-full bg-green-500/10 px-3 py-1 text-xs font-medium text-green-600 dark:text-green-400"
@@ -419,7 +420,7 @@ function ResultsDashboard({
                     {kw}
                   </span>
                 ))}
-              {analysis.jdKeywords.filter((k) => !analysis.missingKeywords.includes(k)).length === 0 && (
+              {matchedKeywords.length === 0 && (
                 <p className="text-sm text-muted-foreground">No keyword matches found.</p>
               )}
             </div>
@@ -607,12 +608,23 @@ function ResultsDashboard({
 
 // ─── Normalise backend response (guards against null/undefined arrays) ────────
 function normalizeAnalysis(a: ResumeAnalysis): ResumeAnalysis {
+  const numericScore = Number(a.matchScore ?? a.atsScore ?? 0);
+  const safeScore = Number.isFinite(numericScore) ? Math.max(0, Math.min(100, numericScore)) : 0;
+  const matchedKeywords = Array.isArray(a.matchedKeywords) ? a.matchedKeywords : [];
+  const missingKeywords = Array.isArray(a.missingKeywords) ? a.missingKeywords : [];
+  const jdKeywords = Array.isArray(a.jdKeywords)
+    ? a.jdKeywords
+    : [...new Set([...matchedKeywords, ...missingKeywords])];
+
   return {
     ...a,
-    jdKeywords:             Array.isArray(a.jdKeywords)             ? a.jdKeywords             : [],
+    matchScore: safeScore,
+    atsScore: safeScore,
+    jdKeywords,
+    matchedKeywords,
     jdRequiredSkills:       Array.isArray(a.jdRequiredSkills)       ? a.jdRequiredSkills       : [],
     jdNiceToHave:           Array.isArray(a.jdNiceToHave)           ? a.jdNiceToHave           : [],
-    missingKeywords:        Array.isArray(a.missingKeywords)        ? a.missingKeywords        : [],
+    missingKeywords,
     resumeStrengths:        Array.isArray(a.resumeStrengths)        ? a.resumeStrengths        : [],
     resumeWeaknesses:       Array.isArray(a.resumeWeaknesses)       ? a.resumeWeaknesses       : [],
     atsSuggestions:         Array.isArray(a.atsSuggestions)         ? a.atsSuggestions         : [],

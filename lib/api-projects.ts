@@ -55,7 +55,9 @@ export type ResumeAnalysis = {
   hasAnalysis: boolean;
   processingStatus: string;
   matchScore: number;
+  atsScore?: number;
   jdKeywords: string[];
+  matchedKeywords?: string[];
   jdRequiredSkills: string[];
   jdNiceToHave: string[];
   jdSeniority: string;
@@ -315,15 +317,28 @@ export async function analyzeProjectResumeRequest(
   const formData = new FormData();
   formData.append("resume", file);
 
-  const res = await fetch(`${API_URL}/projects/${projectId}/resume/upload`, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
-    body: formData,
-  });
+  let res: Response;
+  try {
+    res = await fetch(`${API_URL}/projects/${projectId}/resume/upload`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+      body: formData,
+    });
+  } catch {
+    throw new Error("Could not reach the resume analysis server. Make sure the backend is running and try again.");
+  }
 
-  const data = await res.json();
+  let data: { message?: string; analysis?: ResumeAnalysis; resumeText?: string } = {};
+  try {
+    data = await res.json();
+  } catch {
+    if (!res.ok) {
+      throw new Error(`Resume analysis failed (${res.status}).`);
+    }
+    throw new Error("Resume analysis returned an unexpected response.");
+  }
 
   if (!res.ok) {
     throw new Error(data.message || "Resume analysis failed");

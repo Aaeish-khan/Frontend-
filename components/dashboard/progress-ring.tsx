@@ -17,9 +17,10 @@ export function ProgressRing({
   className,
   children 
 }: ProgressRingProps) {
+  const safeProgress = Number.isFinite(progress) ? Math.max(0, Math.min(100, progress)) : 0
   const radius = (size - strokeWidth) / 2
   const circumference = radius * 2 * Math.PI
-  const offset = circumference - (progress / 100) * circumference
+  const offset = circumference - (safeProgress / 100) * circumference
 
   return (
     <div className={cn("relative inline-flex items-center justify-center", className)}>
