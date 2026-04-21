@@ -78,7 +78,7 @@ export function Sidebar({ mobileOpen = false, onMobileOpenChange }: SidebarProps
 
   const handleLogout = () => {
     logout()
-    router.replace("/login")
+    router.replace("/")
     closeMobileNav()
   }
 

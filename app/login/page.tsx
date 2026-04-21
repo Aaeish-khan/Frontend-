@@ -18,6 +18,8 @@ function LoginForm() {
   const { login, demoLogin, user, loading: authLoading } = useAuth();
 
   const registered = searchParams.get("registered") === "1";
+  const reset = searchParams.get("reset") === "1";
+  const reactivated = searchParams.get("reactivated") === "1";
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -48,9 +50,8 @@ function LoginForm() {
   if (authLoading) {
     return (
       <main className="flex min-h-screen items-center justify-center bg-background px-6">
-        {/* Skeleton loader */}
         <div className="w-full max-w-md space-y-4">
-          <div className="shimmer h-8 rounded-lg w-48 mx-auto" />
+          <div className="shimmer mx-auto h-8 w-48 rounded-lg" />
           <div className="shimmer h-64 rounded-xl" />
         </div>
       </main>
@@ -58,13 +59,11 @@ function LoginForm() {
   }
 
   return (
-    <main className="relative flex min-h-screen items-center justify-center bg-background px-6 overflow-hidden">
-      {/* Ambient orbs */}
+    <main className="relative flex min-h-screen items-center justify-center overflow-hidden bg-background px-6">
       <div className="pointer-events-none absolute inset-0">
-        <div className="orb orb-blue absolute top-0 left-1/4 w-[500px] h-[500px] opacity-[0.06]" />
-        <div className="orb orb-purple absolute bottom-0 right-1/4 w-[400px] h-[400px] opacity-[0.05]" />
+        <div className="orb orb-blue absolute top-0 left-1/4 h-[500px] w-[500px] opacity-[0.06]" />
+        <div className="orb orb-purple absolute right-1/4 bottom-0 h-[400px] w-[400px] opacity-[0.05]" />
       </div>
-      {/* Grid pattern */}
       <div
         className="pointer-events-none absolute inset-0"
         style={{
@@ -79,16 +78,12 @@ function LoginForm() {
         animate="visible"
         variants={scaleIn}
       >
-        {/* Logo mark above card */}
-        <motion.div
-          className="mb-6 flex justify-center"
-          variants={staggerItem}
-        >
-          <Link href="/" className="flex items-center gap-2 group">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 shadow-lg shadow-indigo-500/30 transition-all duration-300 group-hover:shadow-indigo-500/50 group-hover:scale-110">
+        <motion.div className="mb-6 flex justify-center" variants={staggerItem}>
+          <Link href="/" className="group flex items-center gap-2">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 shadow-lg shadow-indigo-500/30 transition-all duration-300 group-hover:scale-110 group-hover:shadow-indigo-500/50">
               <Sparkles className="h-5 w-5 text-white" />
             </div>
-            <span className="text-xl font-semibold tracking-tight text-foreground group-hover:text-primary transition-colors">
+            <span className="text-xl font-semibold tracking-tight text-foreground transition-colors group-hover:text-primary">
               InterMate
             </span>
           </Link>
@@ -97,7 +92,9 @@ function LoginForm() {
         <Card className="w-full">
           <CardHeader>
             <CardTitle className="text-center text-2xl">Welcome back</CardTitle>
-            <p className="text-center text-sm text-muted-foreground mt-1">Sign in to your InterMate account</p>
+            <p className="mt-1 text-center text-sm text-muted-foreground">
+              Sign in to your InterMate account
+            </p>
           </CardHeader>
           <CardContent>
             <motion.form
@@ -108,29 +105,84 @@ function LoginForm() {
               variants={staggerContainer}
             >
               {registered ? (
-                <motion.div variants={staggerItem} className="rounded-lg border border-emerald-500/20 bg-emerald-500/10 px-3 py-2 text-sm text-emerald-400">
+                <motion.div
+                  variants={staggerItem}
+                  className="rounded-lg border border-emerald-500/20 bg-emerald-500/10 px-3 py-2 text-sm text-emerald-400"
+                >
                   Account created successfully. Please log in.
                 </motion.div>
               ) : null}
 
+              {reset ? (
+                <motion.div
+                  variants={staggerItem}
+                  className="rounded-lg border border-emerald-500/20 bg-emerald-500/10 px-3 py-2 text-sm text-emerald-400"
+                >
+                  Password reset successfully. You can log in with your new password.
+                </motion.div>
+              ) : null}
+
+              {reactivated ? (
+                <motion.div
+                  variants={staggerItem}
+                  className="rounded-lg border border-emerald-500/20 bg-emerald-500/10 px-3 py-2 text-sm text-emerald-400"
+                >
+                  Account reactivated successfully. Please log in.
+                </motion.div>
+              ) : null}
+
               <motion.div variants={staggerItem} className="space-y-2">
-                <Label htmlFor="email" className="text-sm font-medium text-foreground/90">Email</Label>
-                <Input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required placeholder="you@example.com" />
+                <Label htmlFor="email" className="text-sm font-medium text-foreground/90">
+                  Email
+                </Label>
+                <Input
+                  id="email"
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                  placeholder="you@example.com"
+                />
               </motion.div>
 
               <motion.div variants={staggerItem} className="space-y-2">
-                <Label htmlFor="password" className="text-sm font-medium text-foreground/90">Password</Label>
-                <Input id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required placeholder="••••••••" />
+                <Label htmlFor="password" className="text-sm font-medium text-foreground/90">
+                  Password
+                </Label>
+                <Input
+                  id="password"
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                  placeholder="........"
+                />
+                <div className="flex justify-end">
+                  <Link
+                    href="/forgot-password"
+                    className="text-sm font-medium text-primary transition-colors hover:text-primary/80"
+                  >
+                    Forgot password?
+                  </Link>
+                </div>
               </motion.div>
 
               {error ? (
-                <motion.p
+                <motion.div
                   initial={{ opacity: 0, y: -4 }}
                   animate={{ opacity: 1, y: 0 }}
-                  className="text-sm text-red-400"
+                  className="space-y-2"
                 >
-                  {error}
-                </motion.p>
+                  <p className="text-sm text-red-400">{error}</p>
+                  {error.toLowerCase().includes("deactivated") ? (
+                    <Link
+                      href="/reactivate-account"
+                      className="inline-block text-sm font-medium text-primary transition-colors hover:text-primary/80"
+                    >
+                      Reactivate account
+                    </Link>
+                  ) : null}
+                </motion.div>
               ) : null}
 
               <motion.div variants={staggerItem}>
@@ -153,7 +205,10 @@ function LoginForm() {
                   type="button"
                   variant="outline"
                   className="w-full"
-                  onClick={() => { demoLogin(); router.replace("/dashboard"); }}
+                  onClick={() => {
+                    demoLogin();
+                    router.replace("/dashboard");
+                  }}
                 >
                   Continue as Demo
                 </Button>
@@ -161,7 +216,7 @@ function LoginForm() {
 
               <motion.p variants={staggerItem} className="text-center text-sm text-muted-foreground">
                 Don&apos;t have an account?{" "}
-                <Link href="/signup" className="text-primary hover:text-primary/80 transition-colors font-medium">
+                <Link href="/signup" className="font-medium text-primary transition-colors hover:text-primary/80">
                   Sign up
                 </Link>
               </motion.p>

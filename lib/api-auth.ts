@@ -58,6 +58,10 @@ type SignupResponse = {
   message: string;
 };
 
+type MessageResponse = {
+  message: string;
+};
+
 type LoginResponse = {
   message: string;
   token: string;
@@ -101,6 +105,51 @@ export async function loginRequest(data: {
   password: string;
 }): Promise<LoginResponse> {
   const res = await fetch(`${API_URL}/auth/login`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(data),
+  });
+
+  return handleResponse<LoginResponse>(res);
+}
+
+export async function forgotPasswordRequest(data: {
+  email: string;
+}): Promise<MessageResponse> {
+  const res = await fetch(`${API_URL}/auth/forgot-password`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(data),
+  });
+
+  return handleResponse<MessageResponse>(res);
+}
+
+export async function resetPasswordRequest(data: {
+  token: string;
+  newPassword: string;
+  confirmPassword: string;
+}): Promise<MessageResponse> {
+  const res = await fetch(`${API_URL}/auth/reset-password`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(data),
+  });
+
+  return handleResponse<MessageResponse>(res);
+}
+
+export async function reactivateAccountRequest(data: {
+  email: string;
+  password: string;
+}): Promise<LoginResponse> {
+  const res = await fetch(`${API_URL}/auth/reactivate-account`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",

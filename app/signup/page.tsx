@@ -107,7 +107,7 @@ export default function SignupPage() {
             >
               <motion.div variants={staggerItem} className="space-y-2">
                 <Label htmlFor="name" className="text-sm font-medium text-foreground/90">Full Name</Label>
-                <Input id="name" value={name} onChange={(e) => setName(e.target.value)} required placeholder="Jane Smith" />
+                <Input id="name" value={name} onChange={(e) => setName(e.target.value)} required placeholder="Name" />
               </motion.div>
 
               <motion.div variants={staggerItem} className="space-y-2">

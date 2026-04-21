@@ -42,6 +42,18 @@ type Question = {
   improvement?: string;
   score?:      number;
   dimensions?: Dimensions;
+  deliveryFeedback?: string[];
+  deliveryMetrics?: {
+    answerDurationSec?: number;
+    responseLatencySec?: number;
+    wordsPerMinute?: number;
+    averagePauseSec?: number;
+    longSilenceCount?: number;
+    fillerWordsCount?: number;
+    repeatedWordsCount?: number;
+    transcriptWordCount?: number;
+    transcriptFluencyScore?: number;
+  };
 };
 
 type Report = {
@@ -81,6 +93,23 @@ function scoreColor(s: number) {
   if (s >= 6) return "text-primary";
   if (s >= 4) return "text-yellow-500";
   return "text-red-500";
+}
+
+function normalizeAnswerText(value: unknown): string {
+  if (typeof value === "string") return value;
+  if (Array.isArray(value)) {
+    return value
+      .map((item) => normalizeAnswerText(item))
+      .filter(Boolean)
+      .join(" ")
+      .trim();
+  }
+  if (value && typeof value === "object") {
+    const record = value as Record<string, unknown>;
+    if (typeof record.transcript === "string") return record.transcript;
+    if (typeof record.text === "string") return record.text;
+  }
+  return "";
 }
 
 // ── Results sub-components (defined before main export for TS resolution) ─────
@@ -213,6 +242,41 @@ function QuestionFeedbackCard({ q, index }: { q: Question; index: number }) {
                   <span>{q.improvement}</span>
                 </div>
               )}
+              {q.deliveryFeedback && q.deliveryFeedback.length > 0 && (
+                <div className="space-y-2">
+                  <p className="text-xs font-medium text-muted-foreground">Delivery feedback</p>
+                  {q.deliveryFeedback.map((item, idx) => (
+                    <div key={idx} className="flex gap-2 rounded-lg bg-sky-500/5 px-3 py-2 text-xs text-sky-600">
+                      <Volume2 className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+                      <span>{item}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+              {q.deliveryMetrics && (
+                <div className="grid gap-2 text-xs text-muted-foreground sm:grid-cols-2">
+                  {q.deliveryMetrics.wordsPerMinute ? (
+                    <div className="rounded-lg bg-muted/40 px-3 py-2">
+                      Pace: {q.deliveryMetrics.wordsPerMinute} words/min
+                    </div>
+                  ) : null}
+                  {q.deliveryMetrics.fillerWordsCount !== undefined ? (
+                    <div className="rounded-lg bg-muted/40 px-3 py-2">
+                      Filler words: {q.deliveryMetrics.fillerWordsCount}
+                    </div>
+                  ) : null}
+                  {q.deliveryMetrics.longSilenceCount !== undefined ? (
+                    <div className="rounded-lg bg-muted/40 px-3 py-2">
+                      Long silences: {q.deliveryMetrics.longSilenceCount}
+                    </div>
+                  ) : null}
+                  {q.deliveryMetrics.responseLatencySec ? (
+                    <div className="rounded-lg bg-muted/40 px-3 py-2">
+                      Response latency: {q.deliveryMetrics.responseLatencySec.toFixed(1)}s
+                    </div>
+                  ) : null}
+                </div>
+              )}
               {q.aiFeedback && (
                 <p className="text-xs text-muted-foreground leading-relaxed">{q.aiFeedback}</p>
               )}
@@ -269,9 +333,12 @@ export default function ProjectInterviewPage() {
   const streamRef       = useRef<MediaStream | null>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef  = useRef<Blob[]>([]);
+  const listeningStartedAtRef = useRef<number | null>(null);
+  const latestVoiceDeliveryRef = useRef<Record<string, number> | null>(null);
   const audioLevel = useAudioLevel(stream);
 
   const currentQ = currentSession?.questions[currentIndex];
+  const answerText = normalizeAnswerText(answer);
 
   // ── Load history ──
   async function loadHistory() {
@@ -340,7 +407,10 @@ export default function ProjectInterviewPage() {
       const utterance = new SpeechSynthesisUtterance(currentQ.question);
       utterance.rate = 0.9;
       utterance.pitch = 1.05;
-      utterance.onend = () => setInterviewerState("listening");
+      utterance.onend = () => {
+        listeningStartedAtRef.current = Date.now();
+        setInterviewerState("listening");
+      };
 
       const speak = () => {
         const voices = window.speechSynthesis.getVoices();
@@ -361,7 +431,10 @@ export default function ProjectInterviewPage() {
     } else {
       // Fallback: timer proportional to question length
       const words = currentQ.question.split(" ").length;
-      const id = setTimeout(() => setInterviewerState("listening"), words * WORD_STAGGER * 1000 + 700);
+      const id = setTimeout(() => {
+        listeningStartedAtRef.current = Date.now();
+        setInterviewerState("listening");
+      }, words * WORD_STAGGER * 1000 + 700);
       return () => clearTimeout(id);
     }
   }, [currentIndex, interviewerState, stage, currentQ, isTTSEnabled]);
@@ -411,17 +484,19 @@ export default function ProjectInterviewPage() {
 
   // ── Submit answer (Phase 3: server determines completion) ──
   async function handleSubmitAnswer() {
-    if (!currentSession || !answer.trim()) return;
+    if (!currentSession || !answerText.trim()) return;
     try {
       setSubmitting(true);
       setInterviewerState("thinking");
       const updated = await answerProjectInterviewRequest(projectId, currentSession._id, {
         index: currentIndex,
-        answer,
+        answer: answerText,
+        delivery: latestVoiceDeliveryRef.current || undefined,
       });
       const followupWasAdded = (updated as { followupAdded?: boolean }).followupAdded ?? false;
       setCurrentSession(updated);
       setAnswer("");
+      latestVoiceDeliveryRef.current = null;
       if (followupWasAdded) {
         setShowFollowupAlert(true);
         setTimeout(() => setShowFollowupAlert(false), 3500);
@@ -482,10 +557,20 @@ export default function ProjectInterviewPage() {
     });
     try {
       const blob = new Blob(audioChunksRef.current, { type: "audio/webm" });
-      const { transcript } = await transcribeInterviewAnswerRequest(
+      const { transcript, deliveryObservations } = await transcribeInterviewAnswerRequest(
         projectId, currentSession._id, blob
       );
-      if (transcript) setAnswer(transcript);
+      const responseLatencySec = listeningStartedAtRef.current
+        ? Math.max(0, (Date.now() - listeningStartedAtRef.current) / 1000)
+        : 0;
+      latestVoiceDeliveryRef.current = {
+        answerDurationSec: deliveryObservations?.answer_duration_sec ?? recordingTime,
+        averagePauseSec: deliveryObservations?.average_pause_sec ?? 0,
+        longSilenceCount: deliveryObservations?.long_silence_count ?? 0,
+        responseLatencySec: Number(responseLatencySec.toFixed(2)),
+      };
+      const normalizedTranscript = normalizeAnswerText(transcript);
+      if (normalizedTranscript) setAnswer(normalizedTranscript);
     } catch {
       // silently fail — user can type manually
     } finally {
@@ -701,17 +786,17 @@ export default function ProjectInterviewPage() {
               </div>
               <textarea
                 rows={5}
-                value={answer}
+                value={answerText}
                 onChange={e => setAnswer(e.target.value)}
                 placeholder={isRecording ? "Recording… speak your answer" : "Type or record your answer…"}
                 disabled={submitting || interviewerState === "asking" || interviewerState === "thinking" || isRecording || isTranscribing}
                 className="w-full rounded-xl border border-border bg-background px-4 py-3 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-primary/30 transition disabled:opacity-50 disabled:cursor-not-allowed"
               />
               <div className="flex items-center justify-between">
-                <span className="text-xs text-muted-foreground">{answer.length} characters</span>
+                <span className="text-xs text-muted-foreground">{answerText.length} characters</span>
                 <Button
                   onClick={handleSubmitAnswer}
-                  disabled={submitting || !answer.trim() || interviewerState !== "listening" || isRecording || isTranscribing}
+                  disabled={submitting || !answerText.trim() || interviewerState !== "listening" || isRecording || isTranscribing}
                   className="gap-2"
                 >
                   {submitting ? (
@@ -1210,4 +1295,3 @@ function SessionAudioBars({ level }: { level: number }) {
     </div>
   );
 }
-

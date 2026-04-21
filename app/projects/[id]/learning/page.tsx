@@ -310,9 +310,11 @@ function QuizPanel({
 function ProjectWorkshop({
   projectId,
   existing,
+  diagnosedModuleCount,
 }: {
   projectId: string;
   existing?: ProjectRecommendation[];
+  diagnosedModuleCount: number;
 }) {
   const [projects, setProjects] = useState<ProjectRecommendation[]>(existing ?? []);
   const [loading, setLoading]   = useState(false);
@@ -358,9 +360,16 @@ function ProjectWorkshop({
       <CardContent>
         {err && <p className="text-sm text-red-500 mb-3">{err}</p>}
         {projects.length === 0 && !loading && (
-          <p className="text-sm text-muted-foreground">
-            Click &quot;Generate project ideas&quot; to get personalized project recommendations based on your quiz results.
-          </p>
+          <div className="space-y-2">
+            <p className="text-sm text-muted-foreground">
+              Click &quot;Generate project ideas&quot; to get personalized project recommendations based on your quiz results.
+            </p>
+            {diagnosedModuleCount === 0 ? (
+              <p className="text-xs text-amber-600">
+                Take at least one module quiz first so Learning Mode can detect your weak concepts and generate targeted projects.
+              </p>
+            ) : null}
+          </div>
         )}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           {projects.map((p, i) => (
@@ -853,6 +862,7 @@ export default function ProjectLearningPage() {
           <ProjectWorkshop
             projectId={projectId}
             existing={plan.projectRecommendations}
+            diagnosedModuleCount={diagnosedModules.length}
           />
 
         </div>

@@ -250,6 +250,12 @@ export async function answerProjectInterviewRequest(
   data: {
     index: number;
     answer: string;
+    delivery?: {
+      answerDurationSec?: number;
+      responseLatencySec?: number;
+      averagePauseSec?: number;
+      longSilenceCount?: number;
+    };
   }
 ) {
   return authFetch(`${API_URL}/projects/${projectId}/interview/${sessionId}/answer`, {
@@ -268,7 +274,15 @@ export async function transcribeInterviewAnswerRequest(
   projectId: string,
   sessionId: string,
   audioBlob: Blob,
-): Promise<{ transcript: string }> {
+): Promise<{
+  transcript: string;
+  deliveryObservations?: {
+    answer_duration_sec?: number;
+    average_pause_sec?: number;
+    long_silence_count?: number;
+    segment_count?: number;
+  };
+}> {
   const token = getToken();
   const form = new FormData();
   form.append("audio", audioBlob, "answer.webm");
@@ -421,6 +435,7 @@ export type QuizQuestion = {
   question: string;
   options: string[];
   difficulty: string;
+  conceptTested?: string;
 };
 
 export type QuizResult = {
