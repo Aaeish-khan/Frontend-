@@ -4,11 +4,13 @@ import { useEffect, useState, useRef } from "react";
 import { useParams } from "next/navigation";
 import { AppShell } from "@/components/layout/app-shell";
 import {
+  getProjectRequest,
   getProjectInterviewHistoryRequest,
   startProjectInterviewRequest,
   answerProjectInterviewRequest,
   transcribeInterviewAnswerRequest,
   deleteInterviewSessionRequest,
+  type Project,
 } from "@/lib/api-projects";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -83,6 +85,37 @@ type InterviewerState = "asking" | "listening" | "thinking";
 // ── Constants ─────────────────────────────────────────────────────────────────
 
 const WORD_STAGGER = 0.055;
+const TECHNICAL_ROLE_HINTS = [
+  "software",
+  "developer",
+  "engineer",
+  "data",
+  "ai",
+  "machine learning",
+  "it",
+  "cloud",
+  "cyber",
+  "qa",
+  "devops",
+  "programming",
+  "coding",
+];
+
+function isRoleWithTechnicalDepth(project: Project | null) {
+  if (!project) return false;
+  const text = [
+    project.jobCategory,
+    project.customJobCategory,
+    project.jobRole,
+    project.title,
+    project.jobDescription,
+  ]
+    .filter(Boolean)
+    .join(" ")
+    .toLowerCase();
+
+  return TECHNICAL_ROLE_HINTS.some((hint) => text.includes(hint));
+}
 
 function formatDate(d: string) {
   return new Date(d).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
@@ -302,6 +335,7 @@ export default function ProjectInterviewPage() {
   const [starting,        setStarting]        = useState(false);
   const [submitting,      setSubmitting]      = useState(false);
   const [error,           setError]           = useState("");
+  const [project,         setProject]         = useState<Project | null>(null);
   const [interviewerState, setInterviewerState] = useState<InterviewerState>("asking");
   const [isMuted,         setIsMuted]         = useState(false);
   const [isVideoOff,      setIsVideoOff]      = useState(false);
@@ -339,12 +373,20 @@ export default function ProjectInterviewPage() {
 
   const currentQ = currentSession?.questions[currentIndex];
   const answerText = normalizeAnswerText(answer);
+  const showTechnicalPersona = isRoleWithTechnicalDepth(project);
+  const personaOptions: Persona[] = showTechnicalPersona
+    ? ["mixed", "friendly", "strict", "technical", "behavioral"]
+    : ["mixed", "friendly", "strict", "behavioral"];
 
   // ── Load history ──
   async function loadHistory() {
     try {
-      const sessions = await getProjectInterviewHistoryRequest(projectId);
+      const [sessions, projectData] = await Promise.all([
+        getProjectInterviewHistoryRequest(projectId),
+        getProjectRequest(projectId).catch(() => null),
+      ]);
       setHistory(sessions);
+      setProject(projectData);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load history");
     } finally {
@@ -353,6 +395,12 @@ export default function ProjectInterviewPage() {
   }
 
   useEffect(() => { loadHistory(); }, [projectId]);
+
+  useEffect(() => {
+    if (!showTechnicalPersona && selectedPersona === "technical") {
+      setSelectedPersona("mixed");
+    }
+  }, [selectedPersona, showTechnicalPersona]);
 
   // ── Attach stream to video ──
   useEffect(() => {
@@ -695,7 +743,9 @@ export default function ProjectInterviewPage() {
                 </div>
                 <div className="flex-1">
                   <p className="font-semibold text-sm">AI Interviewer</p>
-                  <p className="text-xs text-muted-foreground capitalize">{currentSession.persona || "mixed"} style</p>
+                  <p className="text-xs text-muted-foreground capitalize">
+                    {currentSession.persona === "technical" ? "role-specific" : currentSession.persona || "mixed"} style
+                  </p>
                 </div>
                 <InterviewerStateLabel state={interviewerState} />
               </div>
@@ -1087,7 +1137,7 @@ export default function ProjectInterviewPage() {
         <div className="space-y-3">
           <p className="text-sm font-medium">Choose Interviewer Style</p>
           <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
-            {(["mixed", "friendly", "strict", "technical", "behavioral"] as Persona[]).map((p) => (
+            {personaOptions.map((p) => (
               <button
                 key={p}
                 onClick={() => setSelectedPersona(p)}
@@ -1098,12 +1148,14 @@ export default function ProjectInterviewPage() {
                     : "border-border bg-card hover:border-primary/40"
                 )}
               >
-                <p className="text-xs font-semibold capitalize">{p}</p>
+                <p className="text-xs font-semibold capitalize">
+                  {p === "technical" ? "Role-specific" : p}
+                </p>
                 <p className="text-[10px] text-muted-foreground mt-0.5">
                   {p === "mixed" && "Balanced"}
                   {p === "friendly" && "Warm & supportive"}
                   {p === "strict" && "Demanding"}
-                  {p === "technical" && "Deep tech"}
+                  {p === "technical" && "Deeper role-specific knowledge"}
                   {p === "behavioral" && "STAR-focused"}
                 </p>
               </button>
@@ -1118,7 +1170,7 @@ export default function ProjectInterviewPage() {
               <div className="space-y-1">
                 <h2 className="text-xl font-bold">Start a New Interview</h2>
                 <p className="text-sm text-muted-foreground">
-                  AI will generate questions based on your project's JD and resume.
+                  AI will generate questions based on this role's job description and your resume.
                 </p>
                 <div className="flex items-center gap-4 mt-2 text-xs text-muted-foreground">
                   <span className="flex items-center gap-1"><Camera className="h-3 w-3" />Camera + mic required</span>

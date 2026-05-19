@@ -36,7 +36,7 @@ import {
   Trophy,
   Brain,
   Lightbulb,
-  Code2,
+  ClipboardList,
   TrendingUp,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -305,7 +305,7 @@ function QuizPanel({
   );
 }
 
-// ── Project Workshop ──────────────────────────────────────────────────────────
+// ── Practice Workshop ─────────────────────────────────────────────────────────
 
 function ProjectWorkshop({
   projectId,
@@ -345,16 +345,16 @@ function ProjectWorkshop({
       <CardHeader className="pb-2">
         <div className="flex items-center justify-between">
           <CardTitle className="text-base flex items-center gap-1.5">
-            <Code2 className="h-4 w-4 text-violet-600" /> Project Workshop
+            <ClipboardList className="h-4 w-4 text-violet-600" /> Practice Workshop
           </CardTitle>
           <Button size="sm" variant="outline" onClick={generate} disabled={loading}>
             {loading
               ? <><RefreshCw className="mr-1.5 h-3 w-3 animate-spin" /> Generating…</>
-              : projects.length > 0 ? "Refresh ideas" : "Generate project ideas"}
+              : projects.length > 0 ? "Refresh tasks" : "Generate practice tasks"}
           </Button>
         </div>
         <p className="text-xs text-muted-foreground mt-1">
-          AI-curated projects that directly target your weak concepts
+          AI-curated role-specific activities that target your skill gaps
         </p>
       </CardHeader>
       <CardContent>
@@ -362,11 +362,11 @@ function ProjectWorkshop({
         {projects.length === 0 && !loading && (
           <div className="space-y-2">
             <p className="text-sm text-muted-foreground">
-              Click &quot;Generate project ideas&quot; to get personalized project recommendations based on your quiz results.
+              Click &quot;Generate practice tasks&quot; to get personalized activities based on your quiz results.
             </p>
             {diagnosedModuleCount === 0 ? (
               <p className="text-xs text-amber-600">
-                Take at least one module quiz first so Learning Mode can detect your weak concepts and generate targeted projects.
+                Take at least one module quiz first so Learning Mode can detect your skill gaps and generate targeted activities.
               </p>
             ) : null}
           </div>
@@ -581,7 +581,7 @@ function ModuleCard({
               <div className="flex items-center justify-between">
                 <p className="text-sm font-medium flex items-center gap-1.5">
                   <FlaskConical className="h-4 w-4 text-violet-600" />
-                  Lab: {module.labSpec.title}
+                  Activity: {module.labSpec.title}
                 </p>
                 <Badge variant={labDone ? "default" : "outline"} className="text-xs">
                   {labDone ? "Done" : "Pending"}
@@ -754,7 +754,7 @@ export default function ProjectLearningPage() {
                 </p>
                 {diagnosedModules.length > 0 && (
                   <p className="text-xs text-muted-foreground mt-0.5">
-                    {totalWeakConcepts} weak concepts identified
+                    {totalWeakConcepts} skill gaps identified
                   </p>
                 )}
               </CardContent>
@@ -858,7 +858,7 @@ export default function ProjectLearningPage() {
             </div>
           </div>
 
-          {/* § 4 — Project Workshop */}
+          {/* § 4 — Practice Workshop */}
           <ProjectWorkshop
             projectId={projectId}
             existing={plan.projectRecommendations}

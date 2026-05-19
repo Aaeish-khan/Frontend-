@@ -2,6 +2,7 @@ import "./globals.css";
 import { AuthProvider } from "@/components/auth/auth-provider";
 import { ThemeProvider } from "@/components/theme-provider";
 import { CursorEffect } from "@/components/cursor-effect";
+import { AuroraBackground } from "@/components/ui/aurora-background";
 import { Inter } from "next/font/google";
 import type { Metadata } from "next";
 
@@ -30,8 +31,10 @@ export default function RootLayout({
           enableSystem={false}
           disableTransitionOnChange={false}
         >
-          <CursorEffect />
-          <AuthProvider>{children}</AuthProvider>
+          <AuroraBackground>
+            <CursorEffect />
+            <AuthProvider>{children}</AuthProvider>
+          </AuroraBackground>
         </ThemeProvider>
       </body>
     </html>

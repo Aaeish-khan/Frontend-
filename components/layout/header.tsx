@@ -12,28 +12,25 @@ interface HeaderProps {
 
 export function Header({ title, description, onMenuClick }: HeaderProps) {
   return (
-    <header className="sticky top-0 z-30 border-b border-white/8 bg-background/60 px-4 py-4 backdrop-blur-xl supports-[backdrop-filter]:bg-background/40 sm:px-6">
-      {/* Top gradient line */}
-      <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-primary/40 to-transparent" />
-
-      <div className="flex items-start justify-between gap-3">
-        <div className="flex items-center gap-3 flex-1 min-w-0">
-        <Button
-          type="button"
-          variant="outline"
-          size="icon"
-          className="shrink-0 md:hidden"
-          onClick={onMenuClick}
-          aria-label="Open navigation menu"
-        >
-          <Menu className="h-5 w-5" />
-        </Button>
-        <div className="min-w-0">
-          <h1 className="text-lg font-semibold text-foreground sm:text-xl tracking-tight">{title}</h1>
-          {description ? (
-            <p className="text-sm text-muted-foreground/80">{description}</p>
-          ) : null}
-        </div>
+    <header className="sticky top-0 z-30 px-4 py-3 backdrop-blur-xl supports-[backdrop-filter]:bg-background/50 sm:px-6 lg:px-8">
+      <div className="mx-auto flex max-w-7xl items-center justify-between gap-3 rounded-3xl border border-border/60 bg-card/80 px-3 py-2 shadow-sm shadow-primary/5">
+        <div className="flex min-w-0 flex-1 items-center gap-3">
+          <Button
+            type="button"
+            variant="outline"
+            size="icon"
+            className="h-9 w-9 shrink-0 rounded-2xl md:hidden"
+            onClick={onMenuClick}
+            aria-label="Open navigation menu"
+          >
+            <Menu className="h-5 w-5" />
+          </Button>
+          <div className="min-w-0">
+            <h1 className="truncate text-lg font-bold tracking-tight text-foreground sm:text-xl">{title}</h1>
+            {description ? (
+              <p className="truncate text-xs text-muted-foreground/80 sm:text-sm">{description}</p>
+            ) : null}
+          </div>
         </div>
         <ThemeToggle className="shrink-0" />
       </div>

@@ -18,7 +18,7 @@ export default function AboutPage() {
     <>
       <LandingHeader />
 
-      <main className="relative min-h-screen bg-background px-6 py-16 overflow-hidden">
+      <main className="relative min-h-screen bg-transparent px-6 py-16 overflow-hidden">
         {/* Ambient orbs */}
         <div className="pointer-events-none absolute inset-0">
           <div className="orb orb-blue absolute top-0 left-1/3 w-[500px] h-[500px] opacity-[0.05]" />
@@ -33,10 +33,10 @@ export default function AboutPage() {
           variants={staggerContainer}
         >
           <motion.h1 variants={staggerItem} className="text-4xl font-bold tracking-tight">
-            <span className="gradient-text">About AI Career Coach</span>
+            <span className="gradient-text">About InterMate</span>
           </motion.h1>
           <motion.p variants={staggerItem} className="mt-4 text-base text-muted-foreground leading-relaxed">
-            Learn about our Final Year Project and the team behind this innovative AI-powered career development platform
+            Learn about InterMate, an AI-powered career preparation platform that helps students and early-career professionals prepare for real hiring workflows.
           </motion.p>
         </motion.div>
 
@@ -59,13 +59,11 @@ export default function AboutPage() {
                 </div>
 
                 <p className="text-sm text-muted-foreground leading-relaxed">
-                  AI Career Coach is our Final Year Project (FYP) that addresses the growing need for personalized career guidance in today's competitive job market.
-                  Our platform leverages artificial intelligence to provide instant, actionable feedback on CVs and offers tailored interview preparation to help job seekers improve their prospects.
+                  InterMate is an AI-powered career preparation platform built to help students, fresh graduates, and early-career professionals prepare for competitive hiring processes. Instead of treating resume improvement, interview practice, learning, peer review, and progress tracking as separate tasks, InterMate connects them into one role-specific preparation workflow.
                 </p>
 
                 <p className="mt-4 text-sm text-muted-foreground leading-relaxed">
-                  The project combines machine learning algorithms for CV analysis with natural language processing for generating relevant interview questions.
-                  Our goal is to democratize access to career coaching by making professional-grade guidance available to everyone.
+                  Users can provide a target job description, upload their resume, practice mock interviews, receive ATS-focused resume feedback, follow personalized learning recommendations, track readiness through gamified progress, and generate performance reports. The goal is to make career preparation more structured, measurable, and accessible.
                 </p>
               </CardContent>
             </Card>
@@ -92,10 +90,10 @@ export default function AboutPage() {
 
                 <div className="grid gap-6 md:grid-cols-2 text-sm text-muted-foreground">
                   {[
-                    { tag: "AI-Powered", title: "CV Analysis", desc: "Advanced algorithms analyze CV structure, content quality, and industry relevance to provide comprehensive feedback." },
-                    { tag: "Personalized", title: "Interview Prep", desc: "Dynamic question generation based on job roles, difficulty levels, and industry standards." },
-                    { tag: "Real-time", title: "Feedback", desc: "Instant analysis and suggestions eliminate waiting times and improve iteration speed." },
-                    { tag: "Accessible", title: "Platform", desc: "Web-based solution ensures accessibility across devices and platforms." },
+                    { tag: "Job-Description Driven", title: "Unified Preparation", desc: "InterMate uses the target job description to guide resume analysis, interview questions, learning recommendations, and readiness tracking." },
+                    { tag: "ATS-Focused", title: "Resume Optimization", desc: "The platform compares resumes with the target role to identify missing keywords, weak skills, and improvement opportunities." },
+                    { tag: "AI-Assisted", title: "Mock Interviews", desc: "Users practice role-specific interviews with transcript-based feedback, delivery insights, and improvement suggestions." },
+                    { tag: "Personalized", title: "Learning & Progress", desc: "InterMate turns resume and interview gaps into personalized learning tasks, badges, readiness scores, and downloadable reports." },
                   ].map((item) => (
                     <div key={item.title}>
                       <span className="text-xs bg-primary/10 border border-primary/20 text-primary px-2 py-1 rounded-md">{item.tag}</span>
@@ -128,18 +126,22 @@ export default function AboutPage() {
                 </div>
 
                 <p className="text-sm text-muted-foreground mb-6">
-                  Meet the students behind AI Career Coach
+                  Meet the students behind InterMate
                 </p>
 
                 <div className="grid gap-6 md:grid-cols-3">
-                  {["Aqsa Rao", "Paman Shaikh", "Aisha"].map((name, i) => (
-                    <div key={i} className="rounded-xl border border-white/8 bg-white/3 p-4 text-center hover:border-primary/30 transition-colors duration-200">
+                  {[
+                    { name: "Aqsa Shafique", role: "Backend & AI Lead Developer" },
+                    { name: "Aisha Khan", role: "Frontend Developer & Backend Contributor" },
+                    { name: "Paman Shaikh", role: "UI/UX Designer & Database Developer" },
+                  ].map((member) => (
+                    <div key={member.name} className="rounded-xl border border-white/8 bg-white/3 p-4 text-center hover:border-primary/30 transition-colors duration-200">
                       <div className="mx-auto icon-box flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-br from-primary/20 to-purple-500/10 border border-primary/20">
                         <Users className="h-6 w-6 text-primary" />
                       </div>
-                      <h3 className="mt-4 text-sm font-medium">{name}</h3>
+                      <h3 className="mt-4 text-sm font-medium">{member.name}</h3>
                       <p className="text-xs text-muted-foreground">
-                        {i === 0 ? "Lead Developer" : i === 1 ? "AI/ML Specialist" : "UI/UX"}
+                        {member.role}
                       </p>
                     </div>
                   ))}

@@ -35,7 +35,7 @@ export default function ForgotPasswordPage() {
   };
 
   return (
-    <main className="relative flex min-h-screen items-center justify-center overflow-hidden bg-background px-6">
+    <main className="relative flex min-h-screen items-center justify-center overflow-hidden bg-transparent px-6">
       <div className="pointer-events-none absolute inset-0">
         <div className="orb orb-blue absolute top-0 left-1/4 h-[500px] w-[500px] opacity-[0.06]" />
         <div className="orb orb-purple absolute right-1/4 bottom-0 h-[400px] w-[400px] opacity-[0.05]" />

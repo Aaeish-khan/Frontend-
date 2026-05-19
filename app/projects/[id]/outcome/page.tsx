@@ -4,11 +4,15 @@ import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { AppShell } from "@/components/layout/app-shell";
 import { getProjectRequest, updateProjectOutcomeRequest } from "@/lib/api-projects";
+import {
+  APPLICATION_STATUS_OPTIONS,
+  getApplicationStatusLabel,
+} from "@/lib/project-options";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 
 const statuses = [
-  "applied",
+  ...APPLICATION_STATUS_OPTIONS.map((option) => option.value),
   "interviewing",
   "offer",
   "rejected",
@@ -30,7 +34,7 @@ export default function ProjectOutcomePage() {
   useEffect(() => {
     getProjectRequest(projectId)
       .then((project) => {
-        setStatus(project.outcome?.status || "applied");
+        setStatus(project.applicationStatus || project.outcome?.status || "applied");
         setNotes(project.outcome?.notes || "");
       })
       .catch((err) => setError(err instanceof Error ? err.message : "Failed to load outcome"))
@@ -66,7 +70,7 @@ export default function ProjectOutcomePage() {
             >
               {statuses.map((item) => (
                 <option key={item} value={item}>
-                  {item}
+                  {getApplicationStatusLabel(item)}
                 </option>
               ))}
             </select>

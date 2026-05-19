@@ -8,14 +8,14 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
+import { PublicNavbar } from "@/components/layout/public-navbar";
 import { motion } from "framer-motion";
-import { Sparkles } from "lucide-react";
 import { staggerContainer, staggerItem, scaleIn } from "@/lib/animations";
 
 function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { login, demoLogin, user, loading: authLoading } = useAuth();
+  const { login, user, loading: authLoading } = useAuth();
 
   const registered = searchParams.get("registered") === "1";
   const reset = searchParams.get("reset") === "1";
@@ -49,47 +49,41 @@ function LoginForm() {
 
   if (authLoading) {
     return (
-      <main className="flex min-h-screen items-center justify-center bg-background px-6">
-        <div className="w-full max-w-md space-y-4">
-          <div className="shimmer mx-auto h-8 w-48 rounded-lg" />
-          <div className="shimmer h-64 rounded-xl" />
-        </div>
-      </main>
+      <>
+        <PublicNavbar />
+        <main className="flex min-h-[calc(100vh-4rem)] items-center justify-center bg-transparent px-6 py-10">
+          <div className="w-full max-w-md space-y-4">
+            <div className="shimmer mx-auto h-8 w-48 rounded-lg" />
+            <div className="shimmer h-64 rounded-xl" />
+          </div>
+        </main>
+      </>
     );
   }
 
   return (
-    <main className="relative flex min-h-screen items-center justify-center overflow-hidden bg-background px-6">
-      <div className="pointer-events-none absolute inset-0">
-        <div className="orb orb-blue absolute top-0 left-1/4 h-[500px] w-[500px] opacity-[0.06]" />
-        <div className="orb orb-purple absolute right-1/4 bottom-0 h-[400px] w-[400px] opacity-[0.05]" />
-      </div>
-      <div
-        className="pointer-events-none absolute inset-0"
-        style={{
-          backgroundImage: `radial-gradient(circle at 1px 1px, rgba(99,102,241,0.06) 1px, transparent 0)`,
-          backgroundSize: "40px 40px",
-        }}
-      />
+    <>
+      <PublicNavbar />
+      <main className="relative flex min-h-[calc(100vh-4rem)] items-center justify-center overflow-hidden bg-transparent px-6 py-10">
+        <div className="pointer-events-none absolute inset-0">
+          <div className="orb orb-blue absolute top-0 left-1/4 h-[500px] w-[500px] opacity-[0.06]" />
+          <div className="orb orb-purple absolute right-1/4 bottom-0 h-[400px] w-[400px] opacity-[0.05]" />
+        </div>
+        <div
+          className="pointer-events-none absolute inset-0"
+          style={{
+            backgroundImage: `radial-gradient(circle at 1px 1px, rgba(99,102,241,0.06) 1px, transparent 0)`,
+            backgroundSize: "40px 40px",
+          }}
+        />
 
-      <motion.div
-        className="relative w-full max-w-md"
-        initial="hidden"
-        animate="visible"
-        variants={scaleIn}
-      >
-        <motion.div className="mb-6 flex justify-center" variants={staggerItem}>
-          <Link href="/" className="group flex items-center gap-2">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 shadow-lg shadow-indigo-500/30 transition-all duration-300 group-hover:scale-110 group-hover:shadow-indigo-500/50">
-              <Sparkles className="h-5 w-5 text-white" />
-            </div>
-            <span className="text-xl font-semibold tracking-tight text-foreground transition-colors group-hover:text-primary">
-              InterMate
-            </span>
-          </Link>
-        </motion.div>
-
-        <Card className="w-full">
+        <motion.div
+          className="relative w-full max-w-md"
+          initial="hidden"
+          animate="visible"
+          variants={scaleIn}
+        >
+          <Card className="w-full">
           <CardHeader>
             <CardTitle className="text-center text-2xl">Welcome back</CardTitle>
             <p className="mt-1 text-center text-sm text-muted-foreground">
@@ -200,20 +194,6 @@ function LoginForm() {
                 </div>
               </motion.div>
 
-              <motion.div variants={staggerItem}>
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="w-full"
-                  onClick={() => {
-                    demoLogin();
-                    router.replace("/dashboard");
-                  }}
-                >
-                  Continue as Demo
-                </Button>
-              </motion.div>
-
               <motion.p variants={staggerItem} className="text-center text-sm text-muted-foreground">
                 Don&apos;t have an account?{" "}
                 <Link href="/signup" className="font-medium text-primary transition-colors hover:text-primary/80">
@@ -222,9 +202,10 @@ function LoginForm() {
               </motion.p>
             </motion.form>
           </CardContent>
-        </Card>
-      </motion.div>
-    </main>
+          </Card>
+        </motion.div>
+      </main>
+    </>
   );
 }
 

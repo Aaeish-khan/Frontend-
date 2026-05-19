@@ -16,7 +16,8 @@ import { useParams } from "next/navigation";
 import { AppShell } from "@/components/layout/app-shell";
 import {
   analyzeProjectResumeRequest,
-  getProjectResumeReportRequest,
+  getProjectRequest,
+  type Project,
   type ResumeAnalysis,
 } from "@/lib/api-projects";
 import { ProgressRing } from "@/components/dashboard/progress-ring";
@@ -195,7 +196,7 @@ function UploadPanel({
             <ul className="space-y-2 text-sm text-muted-foreground">
               {[
                 "ATS match score against the job description",
-                "JD keywords present and missing from your resume",
+                "Job description keywords present and missing from your resume",
                 "Resume strengths and specific weaknesses",
                 "ATS formatting suggestions",
                 "Section-by-section improvement tips",
@@ -239,7 +240,7 @@ function UploadPanel({
 function AnalysingSkeleton() {
   const steps = [
     "Extracting text from PDF…",
-    "Identifying JD keywords and requirements…",
+    "Identifying job description keywords and requirements…",
     "Comparing resume content to job description…",
     "Computing ATS match score…",
     "Generating improvement suggestions…",
@@ -299,9 +300,12 @@ function ResultsDashboard({
       `File: ${fileName}`,
       `Date: ${new Date().toLocaleDateString()}`,
       `ATS Match Score: ${analysis.matchScore}% — ${scoreLabel(analysis.matchScore)}`,
-      `JD Seniority: ${analysis.jdSeniority}`,
+      analysis.jobRole ? `Target Role: ${analysis.jobRole}` : "",
+      analysis.jobCategory ? `Job Category: ${analysis.jobCategory}` : "",
+      analysis.experienceLevel ? `Experience Level: ${analysis.experienceLevel}` : "",
+      `Detected Level: ${analysis.jdSeniority}`,
       "",
-      "JD KEYWORDS",
+      "JOB DESCRIPTION KEYWORDS",
       analysis.jdKeywords.join(", ") || "—",
       "",
       "MISSING KEYWORDS",
@@ -567,7 +571,7 @@ function ResultsDashboard({
             <CardTitle className="flex items-center justify-between">
               <span className="flex items-center gap-2">
                 <TrendingUp className="h-5 w-5 text-primary" />
-                JD Requirements Breakdown
+                Job Description Requirements
               </span>
               {showJd ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
             </CardTitle>
@@ -634,6 +638,46 @@ function normalizeAnalysis(a: ResumeAnalysis): ResumeAnalysis {
 }
 
 // ─── Main page ─────────────────────────────────────────────────────────────────
+function analysisFromProject(project: Project): ResumeAnalysis | null {
+  const insights = project.aiInsights;
+  const matchScore = insights?.resumeMatchScore;
+  const hasAnalysis =
+    insights?.processingStatus === "done" ||
+    typeof matchScore === "number" ||
+    Boolean(insights?.processedAt);
+
+  if (!insights || !hasAnalysis) return null;
+
+  const jdKeywords = insights.jdKeywords ?? [];
+  const missingKeywords = insights.missingKeywords ?? [];
+
+  return normalizeAnalysis({
+    hasAnalysis: true,
+    processingStatus: insights.processingStatus ?? "done",
+    matchScore: matchScore ?? 0,
+    atsScore: matchScore ?? 0,
+    jdKeywords,
+    matchedKeywords: jdKeywords.filter((keyword) => !missingKeywords.includes(keyword)),
+    jdRequiredSkills: insights.jdRequiredSkills ?? [],
+    jdNiceToHave: insights.jdNiceToHave ?? [],
+    jdSeniority: insights.jdSeniority ?? "",
+    missingKeywords,
+    resumeStrengths: insights.resumeStrengths ?? [],
+    resumeWeaknesses: insights.resumeWeaknesses ?? [],
+    atsSuggestions: insights.atsSuggestions ?? [],
+    improvementSuggestions: insights.improvementSuggestions ?? [],
+    suggestions: insights.atsSuggestions ?? [],
+    resumeText: project.resumeText ?? "",
+    resumeFileUrl: project.resumeFileUrl ?? "",
+    processedAt: insights.processedAt ?? null,
+    jobDescription: project.jobDescription ?? "",
+    jobRole: project.jobRole ?? "",
+    companyName: project.companyName ?? "",
+    jobCategory: project.customJobCategory || project.jobCategory || "",
+    experienceLevel: project.experienceLevel ?? "",
+  });
+}
+
 export default function ProjectResumePage() {
   const params = useParams();
   const projectId = params.id as string;
@@ -648,11 +692,16 @@ export default function ProjectResumePage() {
 
   // Load existing analysis on mount
   useEffect(() => {
-    getProjectResumeReportRequest(projectId)
-      .then((data) => {
-        setJdPreview(data.jobDescription || "");
-        if (data.hasAnalysis) {
-          setAnalysis(normalizeAnalysis(data as ResumeAnalysis));
+    getProjectRequest(projectId)
+      .then((project) => {
+        setJdPreview(project.jobDescription || "");
+        if (project.resumeFileUrl) {
+          setUploadedFileName(project.resumeFileUrl.split("/").pop() || "resume.pdf");
+        }
+
+        const existingAnalysis = analysisFromProject(project);
+        if (existingAnalysis) {
+          setAnalysis(existingAnalysis);
           setStage("done");
         } else {
           setStage("upload");

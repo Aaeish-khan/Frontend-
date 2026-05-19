@@ -9,7 +9,11 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import {
-  ArrowLeft,
+  getApplicationStatusLabel,
+  getProjectApplicationStatus,
+  getProjectCategoryLabel,
+} from "@/lib/project-options";
+import {
   Building2,
   Briefcase,
   PencilLine,
@@ -82,6 +86,8 @@ export default function ProjectDetailsPage() {
   const matchScore = insights?.resumeMatchScore ?? 0;
   const hasAnalysis = insights?.processingStatus === "done";
   const projectRouteId = project?.id || projectId;
+  const applicationStatus = project ? getProjectApplicationStatus(project) : "applied";
+  const categoryLabel = project ? getProjectCategoryLabel(project) : "";
 
   return (
     <AppShell
@@ -94,13 +100,7 @@ export default function ProjectDetailsPage() {
       {!loading && project ? (
         <div className="space-y-6">
           {/* ── Top actions ── */}
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <Button asChild variant="outline" className="w-full gap-2 sm:w-auto">
-              <Link href="/projects">
-                <ArrowLeft className="h-4 w-4" />
-                Back to Projects
-              </Link>
-            </Button>
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-end">
             <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
               <Button asChild variant="outline" className="w-full gap-2 sm:w-auto">
                 <Link href={`/projects/${projectRouteId}/edit`}>
@@ -137,6 +137,23 @@ export default function ProjectDetailsPage() {
                     <p className="text-sm text-muted-foreground">{project.jobRole || "Not added"}</p>
                   </div>
                 </div>
+
+                {categoryLabel || project.experienceLevel ? (
+                  <div className="grid gap-3 rounded-xl border p-3">
+                    {categoryLabel ? (
+                      <div>
+                        <p className="text-sm font-medium">Category</p>
+                        <p className="text-sm text-muted-foreground">{categoryLabel}</p>
+                      </div>
+                    ) : null}
+                    {project.experienceLevel ? (
+                      <div>
+                        <p className="text-sm font-medium">Experience Level</p>
+                        <p className="text-sm text-muted-foreground">{project.experienceLevel}</p>
+                      </div>
+                    ) : null}
+                  </div>
+                ) : null}
 
                 {/* ATS Score card */}
                 <div className="rounded-xl border p-4">
@@ -200,9 +217,9 @@ export default function ProjectDetailsPage() {
 
                 {/* Outcome */}
                 <div className="rounded-xl border p-3">
-                  <p className="text-sm font-medium">Current Outcome</p>
-                  <p className="text-sm capitalize text-muted-foreground">
-                    {project.outcome?.status || "applied"}
+                  <p className="text-sm font-medium">Application Status</p>
+                  <p className="text-sm text-muted-foreground">
+                    {getApplicationStatusLabel(applicationStatus)}
                   </p>
                 </div>
 

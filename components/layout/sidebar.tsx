@@ -40,14 +40,27 @@ const bottomNav = [{ name: "Settings", href: "/settings", icon: Settings }]
 interface SidebarProps {
   mobileOpen?: boolean
   onMobileOpenChange?: (open: boolean) => void
+  collapsed?: boolean
+  onCollapsedChange?: (collapsed: boolean) => void
 }
 
-export function Sidebar({ mobileOpen = false, onMobileOpenChange }: SidebarProps) {
+export function Sidebar({
+  mobileOpen = false,
+  onMobileOpenChange,
+  collapsed,
+  onCollapsedChange,
+}: SidebarProps) {
   const pathname = usePathname()
   const router = useRouter()
   const { user, logout } = useAuth()
-  const [collapsed, setCollapsed] = useState(false)
+  const [internalCollapsed, setInternalCollapsed] = useState(false)
   const [projects, setProjects] = useState<Project[]>([])
+  const isCollapsed = collapsed ?? internalCollapsed
+
+  const setCollapsed = (next: boolean) => {
+    setInternalCollapsed(next)
+    onCollapsedChange?.(next)
+  }
 
   useEffect(() => {
     getProjectsRequest().then(setProjects).catch(() => {})
@@ -86,19 +99,19 @@ export function Sidebar({ mobileOpen = false, onMobileOpenChange }: SidebarProps
     <>
       <div
         className={cn(
-          "flex h-16 items-center border-b border-white/8 px-4",
-          collapsed && !isMobile ? "justify-center" : "justify-between",
+          "flex h-16 items-center border-b border-border/60 px-3",
+          isCollapsed && !isMobile ? "justify-center" : "justify-between",
         )}
       >
         <Link
           href="/dashboard"
-          className="flex items-center gap-2"
+          className="flex items-center gap-2.5"
           onClick={() => isMobile && closeMobileNav()}
         >
-          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-gradient-to-br from-indigo-500 to-purple-600 shadow-lg shadow-indigo-500/30">
+          <div className="flex h-9 w-9 items-center justify-center rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-600 shadow-md shadow-indigo-500/25">
             <Sparkles className="h-5 w-5 text-primary-foreground" />
           </div>
-          {(isMobile || !collapsed) && (
+          {(isMobile || !isCollapsed) && (
             <span className="text-lg font-semibold text-sidebar-foreground">InterMate</span>
           )}
         </Link>
@@ -118,27 +131,27 @@ export function Sidebar({ mobileOpen = false, onMobileOpenChange }: SidebarProps
             variant="ghost"
             size="icon"
             className={cn(
-              "h-8 w-8 text-sidebar-foreground hover:bg-sidebar-accent",
-              collapsed && "absolute -right-3 top-6 z-50 h-6 w-6 rounded-full border bg-sidebar",
+              "h-8 w-8 rounded-xl text-sidebar-foreground hover:bg-sidebar-accent",
+              isCollapsed && "absolute -right-3 top-6 z-50 h-6 w-6 rounded-full border bg-sidebar shadow-sm",
             )}
-            onClick={() => setCollapsed(!collapsed)}
+            onClick={() => setCollapsed(!isCollapsed)}
           >
-            {collapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
+            {isCollapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
           </Button>
         )}
       </div>
 
-      {(isMobile || !collapsed) && activeProject ? (
+      {(isMobile || !isCollapsed) && activeProject ? (
         <div className="border-b border-sidebar-border px-3 py-3">
-          <p className="text-xs uppercase tracking-wide text-sidebar-foreground/50">Active Project</p>
+          <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-sidebar-foreground/50">Active Project</p>
           <p className="truncate text-sm font-medium text-sidebar-foreground">{activeProject.title}</p>
           <p className="truncate text-xs text-sidebar-foreground/60">{activeProject.companyName || activeProject.jobRole}</p>
         </div>
       ) : null}
 
-      <nav className="flex-1 space-y-4 overflow-y-auto p-3">
-        <div className="space-y-1">
-          {(isMobile || !collapsed) && <p className="px-2 text-xs uppercase tracking-wide text-sidebar-foreground/50">Global</p>}
+      <nav className="flex-1 space-y-4 overflow-y-auto px-3 py-4">
+        <div className="space-y-1.5">
+          {(isMobile || !isCollapsed) && <p className="px-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-sidebar-foreground/50">Global</p>}
           {globalNavigation.map((item) => {
             const isActive = pathname === item.href || pathname.startsWith(item.href + "/")
             return (
@@ -147,26 +160,26 @@ export function Sidebar({ mobileOpen = false, onMobileOpenChange }: SidebarProps
                 href={item.href}
                 onClick={() => isMobile && closeMobileNav()}
                 className={cn(
-                  "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
+                  "flex items-center gap-3 rounded-2xl px-3 py-2.5 text-sm font-medium transition-all duration-200",
                   isActive
-                    ? "bg-gradient-to-r from-indigo-500/20 to-purple-500/10 text-primary border-l-2 border-primary shadow-sm shadow-primary/10"
-                    : "text-sidebar-foreground/80 hover:bg-white/6 hover:text-foreground",
-                  collapsed && !isMobile && "justify-center px-2 border-l-0",
+                    ? "bg-primary text-primary-foreground shadow-sm shadow-primary/20"
+                    : "text-sidebar-foreground/75 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
+                  isCollapsed && !isMobile && "justify-center px-2",
                 )}
-                title={!isMobile && collapsed ? item.name : undefined}
+                title={!isMobile && isCollapsed ? item.name : undefined}
               >
-                <span className={cn("icon-box rounded-md p-0.5", isActive && "text-primary")}>
+                <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-background/60">
                   <item.icon className="h-5 w-5 shrink-0" />
                 </span>
-                {(isMobile || !collapsed) && <span>{item.name}</span>}
+                {(isMobile || !isCollapsed) && <span>{item.name}</span>}
               </Link>
             )
           })}
         </div>
 
         {projectNavigation.length > 0 ? (
-          <div className="space-y-1">
-            {(isMobile || !collapsed) && <p className="px-2 text-xs uppercase tracking-wide text-sidebar-foreground/50">This Project</p>}
+          <div className="space-y-1.5">
+            {(isMobile || !isCollapsed) && <p className="px-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-sidebar-foreground/50">This Project</p>}
             {projectNavigation.map((item) => {
               const isActive = pathname === item.href || pathname.startsWith(item.href + "/")
               return (
@@ -175,16 +188,18 @@ export function Sidebar({ mobileOpen = false, onMobileOpenChange }: SidebarProps
                   href={item.href}
                   onClick={() => isMobile && closeMobileNav()}
                   className={cn(
-                    "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
+                    "flex items-center gap-3 rounded-2xl px-3 py-2.5 text-sm font-medium transition-all duration-200",
                     isActive
-                      ? "bg-sidebar-primary text-sidebar-primary-foreground"
-                      : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
-                    collapsed && !isMobile && "justify-center px-2",
+                      ? "bg-sidebar-primary text-sidebar-primary-foreground shadow-sm"
+                      : "text-sidebar-foreground/75 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
+                    isCollapsed && !isMobile && "justify-center px-2",
                   )}
-                  title={!isMobile && collapsed ? item.name : undefined}
+                  title={!isMobile && isCollapsed ? item.name : undefined}
                 >
-                  <item.icon className="h-5 w-5 shrink-0" />
-                  {(isMobile || !collapsed) && <span>{item.name}</span>}
+                  <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-background/60">
+                    <item.icon className="h-5 w-5 shrink-0" />
+                  </span>
+                  {(isMobile || !isCollapsed) && <span>{item.name}</span>}
                 </Link>
               )
             })}
@@ -192,7 +207,7 @@ export function Sidebar({ mobileOpen = false, onMobileOpenChange }: SidebarProps
         ) : null}
       </nav>
 
-        <div className="border-t border-white/8 p-3">
+        <div className="border-t border-border/60 p-3">
         {bottomNav.map((item) => {
           const isActive = pathname === item.href
           return (
@@ -201,24 +216,26 @@ export function Sidebar({ mobileOpen = false, onMobileOpenChange }: SidebarProps
               href={item.href}
               onClick={() => isMobile && closeMobileNav()}
               className={cn(
-                "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-200",
+                "flex items-center gap-3 rounded-2xl px-3 py-2.5 text-sm font-medium transition-all duration-200",
                 isActive
-                  ? "bg-gradient-to-r from-indigo-500/20 to-purple-500/10 text-primary border-l-2 border-primary shadow-sm shadow-primary/10"
-                  : "text-sidebar-foreground/80 hover:bg-white/6 hover:text-foreground",
-                collapsed && !isMobile && "justify-center px-2 border-l-0",
+                  ? "bg-primary text-primary-foreground shadow-sm shadow-primary/20"
+                  : "text-sidebar-foreground/75 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
+                isCollapsed && !isMobile && "justify-center px-2",
               )}
-              title={!isMobile && collapsed ? item.name : undefined}
+              title={!isMobile && isCollapsed ? item.name : undefined}
             >
-              <item.icon className={cn("h-5 w-5 shrink-0", isActive && "text-primary")} />
-              {(isMobile || !collapsed) && <span>{item.name}</span>}
+              <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-background/60">
+                <item.icon className="h-5 w-5 shrink-0" />
+              </span>
+              {(isMobile || !isCollapsed) && <span>{item.name}</span>}
             </Link>
           )
         })}
 
         <div
           className={cn(
-            "mt-3 flex items-center gap-3 rounded-lg bg-white/5 border border-white/8 p-2",
-            collapsed && !isMobile && "justify-center",
+            "mt-3 flex items-center gap-3 rounded-3xl border border-border/60 bg-background/60 p-2 shadow-sm",
+            isCollapsed && !isMobile && "justify-center",
           )}
         >
           <Avatar className="h-9 w-9 border-2 border-primary/30 ring-1 ring-primary/10">
@@ -228,14 +245,14 @@ export function Sidebar({ mobileOpen = false, onMobileOpenChange }: SidebarProps
             </AvatarFallback>
           </Avatar>
 
-          {(isMobile || !collapsed) && (
+          {(isMobile || !isCollapsed) && (
             <div className="flex-1 overflow-hidden">
               <p className="truncate text-sm font-medium text-sidebar-foreground">{user?.name ?? "Guest User"}</p>
               <p className="truncate text-xs text-sidebar-foreground/60">{user?.email ?? ""}</p>
             </div>
           )}
 
-          {(isMobile || !collapsed) && (
+          {(isMobile || !isCollapsed) && (
             <div className="flex items-center gap-1 shrink-0">
               <ThemeToggle />
               <Button
@@ -248,7 +265,7 @@ export function Sidebar({ mobileOpen = false, onMobileOpenChange }: SidebarProps
               </Button>
             </div>
           )}
-          {collapsed && !isMobile && (
+          {isCollapsed && !isMobile && (
             <ThemeToggle />
           )}
         </div>
@@ -260,15 +277,15 @@ export function Sidebar({ mobileOpen = false, onMobileOpenChange }: SidebarProps
     <>
       <aside
         className={cn(
-          "fixed left-0 top-0 z-40 hidden h-screen flex-col border-r border-white/8 bg-sidebar/80 backdrop-blur-xl transition-all duration-300 md:flex",
-          collapsed ? "w-[72px]" : "w-64",
+          "fixed bottom-3 left-3 top-3 z-40 hidden flex-col overflow-hidden rounded-[1.75rem] border border-border/60 bg-sidebar/90 shadow-md shadow-primary/10 backdrop-blur-xl transition-all duration-300 md:flex",
+          isCollapsed ? "w-[76px]" : "w-56",
         )}
       >
         {renderNavContent()}
       </aside>
 
       <Sheet open={mobileOpen} onOpenChange={onMobileOpenChange}>
-        <SheetContent side="left" className="w-[88vw] max-w-[320px] border-r border-white/8 bg-sidebar/90 backdrop-blur-xl p-0">
+        <SheetContent side="left" className="w-[88vw] max-w-[320px] border-r border-border/60 bg-sidebar/95 p-0 backdrop-blur-xl">
           <SheetHeader className="sr-only">
             <SheetTitle>Navigation</SheetTitle>
             <SheetDescription>Browse sections and project tools.</SheetDescription>

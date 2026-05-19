@@ -88,7 +88,7 @@ export default function ContactPage() {
     <>
       <LandingHeader />
 
-      <main className="relative min-h-screen bg-background px-6 py-16 overflow-hidden">
+      <main className="relative min-h-screen bg-transparent px-6 py-16 overflow-hidden">
         <div className="pointer-events-none absolute inset-0">
           <div className="orb orb-cyan absolute top-0 right-1/3 w-[500px] h-[500px] opacity-[0.05]" />
           <div className="orb orb-blue absolute bottom-0 left-1/4 w-[400px] h-[400px] opacity-[0.04]" />
@@ -104,7 +104,7 @@ export default function ContactPage() {
             <span className="gradient-text">Contact Us</span>
           </motion.h1>
           <motion.p variants={staggerItem} className="mt-4 text-base text-muted-foreground leading-relaxed">
-            Have questions about AI Career Coach? We&apos;d love to hear from you.
+            Have questions about InterMate? We&apos;d love to hear from you.
             Send us a message and we&apos;ll respond as soon as possible.
           </motion.p>
         </motion.div>

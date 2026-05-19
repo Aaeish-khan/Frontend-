@@ -7,6 +7,7 @@
  */
 
 import { getToken } from "@/lib/session";
+import type { ApplicationStatus, JobDescriptionExtractionSource } from "@/lib/project-options";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000/api";
 
@@ -17,6 +18,12 @@ export type Project = {
   title: string;
   companyName: string;
   jobRole: string;
+  jobCategory?: string;
+  customJobCategory?: string;
+  experienceLevel?: string;
+  applicationStatus?: ApplicationStatus | string;
+  jobDescriptionFileName?: string;
+  jobDescriptionExtractionSource?: JobDescriptionExtractionSource | string;
   jobDescription: string;
   resumeFileUrl?: string;
   resumeText: string;
@@ -73,6 +80,9 @@ export type ResumeAnalysis = {
   jobDescription: string;
   jobRole: string;
   companyName: string;
+  jobCategory?: string;
+  customJobCategory?: string;
+  experienceLevel?: string;
 };
 
 type CreateProjectResponse = {
@@ -132,6 +142,12 @@ export async function createProjectRequest(data: {
   title: string;
   companyName: string;
   jobRole: string;
+  jobCategory?: string;
+  customJobCategory?: string;
+  experienceLevel?: string;
+  applicationStatus?: ApplicationStatus;
+  jobDescriptionFileName?: string;
+  jobDescriptionExtractionSource?: JobDescriptionExtractionSource;
   jobDescription: string;
   resumeFile: File;
 }): Promise<CreateProjectResponse> {
@@ -141,6 +157,17 @@ export async function createProjectRequest(data: {
   formData.append("title", data.title);
   formData.append("companyName", data.companyName);
   formData.append("jobRole", data.jobRole);
+  if (data.jobCategory) formData.append("jobCategory", data.jobCategory);
+  if (data.customJobCategory) formData.append("customJobCategory", data.customJobCategory);
+  if (data.experienceLevel) formData.append("experienceLevel", data.experienceLevel);
+  if (data.applicationStatus) {
+    formData.append("applicationStatus", data.applicationStatus);
+    formData.append("outcomeStatus", data.applicationStatus);
+  }
+  if (data.jobDescriptionFileName) formData.append("jobDescriptionFileName", data.jobDescriptionFileName);
+  if (data.jobDescriptionExtractionSource) {
+    formData.append("jobDescriptionExtractionSource", data.jobDescriptionExtractionSource);
+  }
   formData.append("jobDescription", data.jobDescription);
   formData.append("resume", data.resumeFile);
 
@@ -162,6 +189,32 @@ export async function createProjectRequest(data: {
   return result;
 }
 
+export async function extractJobDescriptionTextRequest(file: File): Promise<{ text: string }> {
+  const formData = new FormData();
+  formData.append("jobDescriptionFile", file);
+
+  const res = await fetch("/api/projects/extract-job-description", {
+    method: "POST",
+    body: formData,
+  });
+
+  let data: { text?: string; message?: string } = {};
+  try {
+    data = await res.json();
+  } catch {
+    if (!res.ok) {
+      throw new Error(`Job description extraction failed (${res.status}).`);
+    }
+    throw new Error("Job description extraction returned an unexpected response.");
+  }
+
+  if (!res.ok) {
+    throw new Error(data.message || "Failed to extract job description text");
+  }
+
+  return { text: data.text ?? "" };
+}
+
 /**
  * Update a project. Supports optional resume PDF re-upload.
  * Uses multipart/form-data.
@@ -172,6 +225,12 @@ export async function updateProjectRequest(
     title?: string;
     companyName?: string;
     jobRole?: string;
+    jobCategory?: string;
+    customJobCategory?: string;
+    experienceLevel?: string;
+    applicationStatus?: ApplicationStatus;
+    jobDescriptionFileName?: string;
+    jobDescriptionExtractionSource?: JobDescriptionExtractionSource;
     jobDescription?: string;
     resumeFile?: File;
     status?: string;
@@ -183,6 +242,17 @@ export async function updateProjectRequest(
   if (data.title !== undefined) formData.append("title", data.title);
   if (data.companyName !== undefined) formData.append("companyName", data.companyName);
   if (data.jobRole !== undefined) formData.append("jobRole", data.jobRole);
+  if (data.jobCategory !== undefined) formData.append("jobCategory", data.jobCategory);
+  if (data.customJobCategory !== undefined) formData.append("customJobCategory", data.customJobCategory);
+  if (data.experienceLevel !== undefined) formData.append("experienceLevel", data.experienceLevel);
+  if (data.applicationStatus !== undefined) {
+    formData.append("applicationStatus", data.applicationStatus);
+    formData.append("outcomeStatus", data.applicationStatus);
+  }
+  if (data.jobDescriptionFileName !== undefined) formData.append("jobDescriptionFileName", data.jobDescriptionFileName);
+  if (data.jobDescriptionExtractionSource !== undefined) {
+    formData.append("jobDescriptionExtractionSource", data.jobDescriptionExtractionSource);
+  }
   if (data.jobDescription !== undefined) formData.append("jobDescription", data.jobDescription);
   if (data.status !== undefined) formData.append("status", data.status);
   if (data.resumeFile) formData.append("resume", data.resumeFile);
@@ -344,7 +414,11 @@ export async function analyzeProjectResumeRequest(
     throw new Error(data.message || "Resume analysis failed");
   }
 
-  return data;
+  return {
+    message: data.message || "Resume analysis completed",
+    analysis: data.analysis as ResumeAnalysis,
+    resumeText: data.resumeText || "",
+  };
 }
 
 // ─── Learning ──────────────────────────────────────────────────────────────────

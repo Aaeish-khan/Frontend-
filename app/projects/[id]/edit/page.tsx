@@ -4,6 +4,10 @@ import { useEffect, useState, useRef, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { AppShell } from "@/components/layout/app-shell";
 import { getProjectRequest, updateProjectRequest } from "@/lib/api-projects";
+import {
+  EXPERIENCE_LEVEL_OPTIONS,
+  JOB_CATEGORY_OPTIONS,
+} from "@/lib/project-options";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -28,6 +32,9 @@ export default function EditProjectPage() {
   const [title, setTitle] = useState("");
   const [companyName, setCompanyName] = useState("");
   const [jobRole, setJobRole] = useState("");
+  const [jobCategory, setJobCategory] = useState("");
+  const [customJobCategory, setCustomJobCategory] = useState("");
+  const [experienceLevel, setExperienceLevel] = useState("");
   const [jobDescription, setJobDescription] = useState("");
   const [resumeFile, setResumeFile] = useState<File | null>(null);
   const [hasExistingResume, setHasExistingResume] = useState(false);
@@ -45,6 +52,9 @@ export default function EditProjectPage() {
         setTitle(project.title || "");
         setCompanyName(project.companyName || "");
         setJobRole(project.jobRole || "");
+        setJobCategory(project.jobCategory || "");
+        setCustomJobCategory(project.customJobCategory || "");
+        setExperienceLevel(project.experienceLevel || "");
         setJobDescription(project.jobDescription || "");
         setHasExistingResume(!!project.resumeText && project.resumeText.length > 50);
       })
@@ -97,6 +107,9 @@ export default function EditProjectPage() {
         title: title.trim(),
         companyName: companyName.trim(),
         jobRole: jobRole.trim(),
+        jobCategory,
+        customJobCategory: jobCategory === "Other" ? customJobCategory.trim() : "",
+        experienceLevel,
         jobDescription: jobDescription.trim(),
         ...(resumeFile ? { resumeFile } : {}),
       });
@@ -169,6 +182,59 @@ export default function EditProjectPage() {
                   />
                 </div>
               </div>
+
+              <div className="grid gap-4 md:grid-cols-2">
+                <div>
+                  <label className="mb-1.5 block text-sm font-medium">
+                    Job Category / Industry
+                  </label>
+                  <select
+                    value={jobCategory}
+                    onChange={(e) => {
+                      setJobCategory(e.target.value);
+                      if (e.target.value !== "Other") setCustomJobCategory("");
+                    }}
+                    className="w-full rounded-xl border bg-background px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
+                  >
+                    <option value="">Select a category</option>
+                    {JOB_CATEGORY_OPTIONS.map((option) => (
+                      <option key={option} value={option}>
+                        {option}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="mb-1.5 block text-sm font-medium">
+                    Experience Level
+                  </label>
+                  <select
+                    value={experienceLevel}
+                    onChange={(e) => setExperienceLevel(e.target.value)}
+                    className="w-full rounded-xl border bg-background px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
+                  >
+                    <option value="">Select a level</option>
+                    {EXPERIENCE_LEVEL_OPTIONS.map((option) => (
+                      <option key={option} value={option}>
+                        {option}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              {jobCategory === "Other" ? (
+                <div>
+                  <label className="mb-1.5 block text-sm font-medium">Custom Category</label>
+                  <input
+                    value={customJobCategory}
+                    onChange={(e) => setCustomJobCategory(e.target.value)}
+                    placeholder="Custom category"
+                    className="w-full rounded-xl border bg-background px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
+                  />
+                </div>
+              ) : null}
             </CardContent>
           </Card>
 
